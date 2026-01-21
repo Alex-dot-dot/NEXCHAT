@@ -30,8 +30,7 @@ if (typeof toggleFullscreen === 'undefined') {
 
 console.log("🔗 Setting up ALL button event listeners...");
 
-// Wait for the page to be fully loaded AND chat.js module to initialize
-setTimeout(() => {
+function attachAllButtonListeners() {
   console.log("✅ Attaching button listeners");
 
   // ============ HEADER BUTTONS ============
@@ -370,4 +369,8 @@ setTimeout(() => {
   }
 
   console.log("✅✅✅ ALL BUTTON LISTENERS ATTACHED ✅✅✅");
+}
+// Wait for the page to be fully loaded AND chat.js module to initialize
+setTimeout(() => {
+  attachAllButtonListeners();
 }, 500);

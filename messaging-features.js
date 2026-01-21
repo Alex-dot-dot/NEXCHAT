@@ -514,6 +514,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (audioFile) {
           // Store audio file temporarily for sending
           selectedFile = audioFile;
+          try { document.dispatchEvent(new CustomEvent('selectedFileChanged')); } catch(e){}
           document.getElementById("attachment-preview").style.display = "flex";
           document.getElementById("attachment-name").textContent = `🎤 ${audioFile.name}`;
         }
@@ -532,6 +533,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const audioFile = await stopAudioRecording();
       if (audioFile) {
         selectedFile = audioFile;
+        try { document.dispatchEvent(new CustomEvent('selectedFileChanged')); } catch(e){}
         document.getElementById("attachment-preview").style.display = "flex";
         document.getElementById("attachment-name").textContent = `🎤 ${audioFile.name}`;
         showNotif("🎤 Audio ready to send", "success", 2000);

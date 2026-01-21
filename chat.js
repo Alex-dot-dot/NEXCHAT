@@ -3159,6 +3159,7 @@ document.getElementById("file-input")?.addEventListener("change", (e) => {
   selectedFile = file;
   showAttachmentPreview(file);
   showNotif(`✅ File selected: ${file.name} `, "success", 1500);
+  try { document.dispatchEvent(new CustomEvent('selectedFileChanged')); } catch(e){}
 });
 
 function showAttachmentPreview(file) {
@@ -3185,6 +3186,7 @@ function removeAttachment() {
   if (preview) preview.style.display = "none";
 
   showNotif("✗ Attachment removed", "info", 1000);
+  try { document.dispatchEvent(new CustomEvent('selectedFileChanged')); } catch(e){}
 }
 
 async function uploadFileToStorage(file, chatId, isGroup = false) {
@@ -6121,6 +6123,7 @@ function initializeBasicUI() {
   console.log("✅ All header button listeners attached");
 
   const sendBtn = document.querySelector(".send-btn");
+  const audioSendBtn = document.getElementById('audio-send-btn');
   if (sendBtn) {
     sendBtn.addEventListener("click", (e) => {
       console.log("📤 Send button clicked");
@@ -6128,6 +6131,38 @@ function initializeBasicUI() {
       sendMessage(e);
     });
   }
+
+  if (audioSendBtn) {
+    audioSendBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      // audio-send should trigger same send flow; sendMessage will pick up selectedFile
+      sendMessage(e);
+    });
+  }
+
+  // Toggle between text-send (large) and audio-send based on attachment state
+  function updateSendButtons() {
+    const input = document.getElementById('message-input');
+    const hasText = input && input.value.trim().length > 0;
+    if (typeof selectedFile !== 'undefined' && selectedFile) {
+      if (sendBtn) sendBtn.style.display = 'none';
+      if (audioSendBtn) audioSendBtn.style.display = 'flex';
+    } else {
+      if (audioSendBtn) audioSendBtn.style.display = 'none';
+      if (sendBtn) {
+        sendBtn.style.display = 'flex';
+        if (hasText) sendBtn.classList.add('large'); else sendBtn.classList.remove('large');
+      }
+    }
+  }
+
+  // Listen for attachment changes
+  document.addEventListener('selectedFileChanged', () => updateSendButtons());
+  // Update when user types
+  const messageInput = document.getElementById('message-input');
+  if (messageInput) messageInput.addEventListener('input', () => updateSendButtons());
+  // Run once at startup
+  setTimeout(() => updateSendButtons(), 200);
 
   // Attach event listeners for back button
   document.getElementById("backBtn")?.addEventListener("click", () => {
@@ -6420,93 +6455,97 @@ async function loadContacts() {
   if (!contactList || !myUID) return;
 
   contactList.innerHTML = '<li style="text-align:center; padding:10px;">Loading contacts...</li>';
-
   try {
-    const q = query(collection(db, "users"), limit(20));
-    const snapshot = await getDocs(q);
-
-    if (snapshot.empty) {
-      contactList.innerHTML = `<li class="empty-state"><p>No users found</p></li>`;
-      return;
+    // Unsubscribe previous listener if exists
+    if (typeof contactsListener === 'function') {
+      try { contactsListener(); } catch (e) { /* ignore */ }
     }
 
-    contactList.innerHTML = "";
-    
-    // Add Chronex AI at the top
-    const chronexLi = document.createElement("li");
-    chronexLi.className = "chat-list-item chronex-ai-item";
-    chronexLi.setAttribute('data-chat-id', 'chronex-ai');
-    chronexLi.innerHTML = `
-      <div class="chat-avatar-container">
-        <div class="chat-avatar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); font-size: 20px;">🤖</div>
-      </div>
-      <div class="chat-info"><h3>Chronex AI</h3></div>
-      <button class="chat-menu-btn" title="Options">⋮</button>
-    `;
+    const q = query(collection(db, "users"), limit(50));
 
-    chronexLi.addEventListener("click", async (e) => {
-      e.stopPropagation();
-      // Initialize Chronex AI with current user
-      if (myUID) {
-        chronexAI.setUserId(myUID);
+    // Real-time listener so UI updates without hard reload
+    contactsListener = onSnapshot(q, (snapshot) => {
+      if (!snapshot || snapshot.empty) {
+        contactList.innerHTML = `<li class="empty-state"><p>No users found</p></li>`;
+        return;
       }
-      // Open Chronex AI chat
-      await openChat("chronex-ai", "Chronex AI", null, "ai");
-      if (typeof showChatDetailView === 'function') showChatDetailView();
-    });
 
-    contactList.appendChild(chronexLi);
-    
-    snapshot.forEach(docSnap => {
-      if (docSnap.id === myUID) return;
-      const user = docSnap.data();
-      const uid = docSnap.id;
-      const name = user.username || user.name || "User";
-      const pic = user.profilePic || null;
+      contactList.innerHTML = "";
 
-      const li = document.createElement("li");
-      li.className = "chat-list-item";
-      li.setAttribute('data-chat-id', uid);
-      let avatar = pic ? `<img src="${pic}" class="chat-avatar" onerror="this.src='logo.jpg'">` : `<div class="chat-avatar">${name.charAt(0)}</div>`;
+      // Add Chronex AI at the top
+      const chronexLi = document.createElement("li");
+      chronexLi.className = "chat-list-item chronex-ai-item";
+      chronexLi.setAttribute('data-chat-id', 'chronex-ai');
+      chronexLi.innerHTML = `
+        <div class="chat-avatar-container">
+          <div class="chat-avatar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); font-size: 20px;">🤖</div>
+        </div>
+        <div class="chat-info"><h3>Chronex AI</h3></div>
+        <button class="chat-menu-btn" title="Options">⋮</button>
+      `;
 
-      li.innerHTML = `
-         <div class="chat-avatar-container">${avatar}</div>
-         <div class="chat-info"><h3>${escape(name)}</h3></div>
-         <button class="chat-menu-btn" title="Options">⋮</button>
-       `;
-
-      li.addEventListener("click", async () => {
-        await openChat(uid, name, pic, "direct");
+      chronexLi.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        if (myUID) chronexAI.setUserId(myUID);
+        await openChat("chronex-ai", "Chronex AI", null, "ai");
         if (typeof showChatDetailView === 'function') showChatDetailView();
       });
-      // Right-click context menu
-      li.addEventListener("contextmenu", (e) => {
-        e.preventDefault();
-        if (typeof showChatContextMenu === 'function') showChatContextMenu(e, uid);
-      });
-      // Long-press handler (250ms hold)
-      let longPressTimer;
-      li.addEventListener("touchstart", () => {
-        longPressTimer = setTimeout(() => {
-          const touchEvent = new MouseEvent('contextmenu', {
-            clientX: event.touches[0].clientX,
-            clientY: event.touches[0].clientY
-          });
-          if (typeof showChatContextMenu === 'function') showChatContextMenu(touchEvent, uid);
-        }, 250);
-      });
-      li.addEventListener("touchend", () => clearTimeout(longPressTimer));
-      
-      // Three-dot menu button click handler
-      const menuBtn = li.querySelector(".chat-menu-btn");
-      if (menuBtn) {
-        menuBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
+
+      contactList.appendChild(chronexLi);
+
+      snapshot.forEach(docSnap => {
+        if (docSnap.id === myUID) return;
+        const user = docSnap.data();
+        const uid = docSnap.id;
+        const name = user.username || user.name || "User";
+        const pic = user.profilePic || null;
+
+        const li = document.createElement("li");
+        li.className = "chat-list-item";
+        li.setAttribute('data-chat-id', uid);
+        let avatar = pic ? `<img src="${pic}" class="chat-avatar" onerror="this.src='logo.jpg'">` : `<div class="chat-avatar">${name.charAt(0)}</div>`;
+
+        li.innerHTML = `
+           <div class="chat-avatar-container">${avatar}</div>
+           <div class="chat-info"><h3>${escape(name)}</h3></div>
+           <button class="chat-menu-btn" title="Options">⋮</button>
+         `;
+
+        li.addEventListener("click", async () => {
+          await openChat(uid, name, pic, "direct");
+          if (typeof showChatDetailView === 'function') showChatDetailView();
+        });
+
+        li.addEventListener("contextmenu", (e) => {
+          e.preventDefault();
           if (typeof showChatContextMenu === 'function') showChatContextMenu(e, uid);
         });
-      }
 
-      contactList.appendChild(li);
+        // Long-press handler (250ms hold)
+        let longPressTimer;
+        li.addEventListener("touchstart", (event) => {
+          longPressTimer = setTimeout(() => {
+            const touchEvent = new MouseEvent('contextmenu', {
+              clientX: event.touches?.[0]?.clientX || 0,
+              clientY: event.touches?.[0]?.clientY || 0
+            });
+            if (typeof showChatContextMenu === 'function') showChatContextMenu(touchEvent, uid);
+          }, 250);
+        });
+        li.addEventListener("touchend", () => clearTimeout(longPressTimer));
+
+        const menuBtn = li.querySelector(".chat-menu-btn");
+        if (menuBtn) {
+          menuBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (typeof showChatContextMenu === 'function') showChatContextMenu(e, uid);
+          });
+        }
+
+        contactList.appendChild(li);
+      });
+    }, (err) => {
+      console.error('Contacts listener error', err);
     });
   } catch (err) {
     console.error("Contacts error", err);
