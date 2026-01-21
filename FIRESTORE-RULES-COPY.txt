@@ -1,4 +1,3 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -26,8 +25,10 @@ service cloud.firestore {
     }
     
     function isAdmin() {
-      return isAuthenticated() && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+      return isAuthenticated() && (
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true ||
+             request.auth.uid in ['azaw', 'demonalexander526@gmail.com']
+      );
     }
     
     // Check if user is blocked
@@ -912,11 +913,7 @@ service cloud.firestore {
     // ADMIN DASHBOARD RULES
     // ============================================================
     
-    // Define admin users
-    function isAdmin() {
-      return isAuthenticated() && 
-             request.auth.uid in ['azaw', 'demonalexander526@gmail.com'];
-    }
+    // Admin user list merged into `isAdmin()` helper above
     
     // ============================================================
     // ADMIN DASHBOARD COLLECTION
