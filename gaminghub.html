@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gaming Hub - NEXCHAT</title>
+  <link rel="stylesheet" href="gaminghub.css" />
+  <link rel="stylesheet" href="reset.css" />
+</head>
+<body>
+  <div class="gaming-hub-container">
+    <!-- Header -->
+    <div class="gaming-header">
+      <div class="gaming-header-top">
+        <button type="button" id="back-to-chat-btn" class="back-btn" title="Back to chat">← Back</button>
+        <h1 class="gaming-title">🎮 Online Games</h1>
+        <div class="header-spacer"></div>
+      </div>
+
+      <!-- Search Bar -->
+      <div class="gaming-search-area">
+        <input 
+          type="text" 
+          id="game-search-input" 
+          class="game-search-input" 
+          placeholder="Search games..."
+          autocomplete="off"
+        />
+      </div>
+
+      <!-- Category Tabs -->
+      <div class="category-tabs">
+        <button type="button" class="category-tab active" data-category="all">All Games</button>
+        <button type="button" class="category-tab" data-category="action">Action</button>
+        <button type="button" class="category-tab" data-category="puzzle">Puzzle</button>
+        <button type="button" class="category-tab" data-category="strategy">Strategy</button>
+        <button type="button" class="category-tab" data-category="multiplayer">Multiplayer</button>
+        <button type="button" class="category-tab" data-category="casual">Casual</button>
+      </div>
+    </div>
+
+    <!-- Games Grid -->
+    <div class="gaming-content">
+      <div id="games-grid" class="games-grid">
+        <!-- Games will be loaded here -->
+      </div>
+
+      <!-- Empty State -->
+      <div id="empty-state" class="empty-state" style="display: none;">
+        <div class="empty-state-content">
+          <div class="empty-icon">🎮</div>
+          <h3>No Games Found</h3>
+          <p>Try searching for a different game or browse other categories.</p>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div id="loading-state" class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading games...</p>
+      </div>
+    </div>
+
+    <!-- Floating Action Button -->
+    <a href="chat.html" class="fab" title="Back to chat">💬</a>
+  </div>
+
+  <!-- Game Detail Modal -->
+  <div id="game-detail-modal" class="game-detail-modal" style="display: none;">
+    <div class="game-detail-content">
+      <button type="button" id="close-game-modal-btn" class="close-modal-btn" title="Close">✕</button>
+      
+      <div class="game-detail-header">
+        <div id="game-detail-image" class="game-detail-image"></div>
+      </div>
+
+      <div class="game-detail-info">
+        <h2 id="game-detail-name" class="game-detail-name"></h2>
+        <div class="game-detail-meta">
+          <div class="meta-item">
+            <span class="meta-label">Category:</span>
+            <span id="game-detail-category" class="meta-value"></span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Players:</span>
+            <span id="game-detail-players" class="meta-value"></span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Rating:</span>
+            <span id="game-detail-rating" class="meta-value"></span>
+          </div>
+        </div>
+
+        <div class="game-detail-stats">
+          <div class="stat-box">
+            <div class="stat-value" id="game-detail-playing">0</div>
+            <div class="stat-label">Playing Now</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="game-detail-score">0</div>
+            <div class="stat-label">Avg Score</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="game-detail-time">0min</div>
+            <div class="stat-label">Avg Time</div>
+          </div>
+        </div>
+
+        <p id="game-detail-description" class="game-detail-description"></p>
+
+        <div class="game-detail-actions">
+          <button type="button" id="play-game-btn" class="play-btn">
+            ▶️ Play Online
+          </button>
+          <button type="button" id="share-game-btn" class="share-btn">
+            📤 Share
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="firebase-config.js"></script>
+  <script src="global-exports.js"></script>
+  <script src="gaminghub.js"></script>
+</body>
+</html>
