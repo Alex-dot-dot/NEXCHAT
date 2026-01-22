@@ -59,9 +59,9 @@ const CHRONEX_CONFIG = {
 
   // API Keys and Tokens
   apiKeys: {
-    openaiKey: process.env.OPENAI_API_KEY || null,
-    huggingfaceKey: process.env.HUGGINGFACE_API_KEY || null,
-    customKey: process.env.CHRONEX_API_KEY || null,
+    openaiKey: null, // API keys from browser environment
+    huggingfaceKey: null,
+    customKey: null,
   },
 
   // Response Settings
