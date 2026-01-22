@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chronex AI - Image Upload & Vision Tester</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+        
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        input[type="file"],
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="file"]:focus,
+        input[type="text"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1em;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: scale(1.02);
+        }
+        
+        .btn-secondary {
+            background: #764ba2;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #63408b;
+            transform: scale(1.02);
+        }
+        
+        .btn-full {
+            grid-column: 1 / -1;
+        }
+        
+        .result {
+            background: #f5f5f5;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .result.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .result.success {
+            border-left-color: #4caf50;
+            background: #f1f8f4;
+        }
+        
+        .result.error {
+            border-left-color: #f44336;
+            background: #fdf5f5;
+        }
+        
+        .result h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .result pre {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 0.9em;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .result p {
+            line-height: 1.6;
+            color: #555;
+        }
+        
+        .preview-image {
+            max-width: 200px;
+            margin-top: 10px;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .endpoint-list {
+            background: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .endpoint-list h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .endpoint-list ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .endpoint-list li {
+            padding: 8px 0;
+            color: #555;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .endpoint-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .endpoint-list code {
+            background: #e8eaf6;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #667eea;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.3);
+        }
+        
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .button-group {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🖼️ Chronex AI - Image Vision Tester</h1>
+            <p>Upload, scan, and analyze images with AI-powered vision capabilities</p>
+        </div>
+        
+        <div class="grid">
+            <!-- Upload & Scan Card -->
+            <div class="card">
+                <h2>📸 Upload & Scan</h2>
+                
+                <div class="endpoint-list">
+                    <h4>Available Methods:</h4>
+                    <ul>
+                        <li><code>POST /ai/upload-image</code> - Just upload</li>
+                        <li><code>POST /ai/scan-image</code> - Upload & analyze</li>
+                    </ul>
+                </div>
+                
+                <form id="scanForm">
+                    <div class="form-group">
+                        <label for="imageFile">📁 Select Image File:</label>
+                        <input type="file" id="imageFile" accept="image/*" required>
+                        <small style="color: #999; margin-top: 5px; display: block;">
+                            Formats: PNG, JPG, JPEG, GIF, WEBP, BMP (Max: 10MB)
+                        </small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="justUpload"> 
+                            Just upload (don't analyze)
+                        </label>
+                    </div>
+                    
+                    <div class="button-group">
+                        <button type="submit" class="btn-primary">Scan Image</button>
+                        <button type="reset" class="btn-secondary">Clear</button>
+                    </div>
+                </form>
+                
+                <div id="scanLoading" class="loading">
+                    <div class="spinner"></div>
+                    <p>Processing image...</p>
+                </div>
+                
+                <div id="scanResult" class="result">
+                    <h3></h3>
+                    <div id="scanResultContent"></div>
+                </div>
+            </div>
+            
+            <!-- Vision Query Card -->
+            <div class="card">
+                <h2>🤖 Vision Query</h2>
+                
+                <div class="endpoint-list">
+                    <h4>Advanced Analysis:</h4>
+                    <ul>
+                        <li><code>POST /ai/image-vision</code></li>
+                        <li>Ask custom questions</li>
+                        <li>Requires uploaded image path</li>
+                    </ul>
+                </div>
+                
+                <form id="visionForm">
+                    <div class="form-group">
+                        <label for="imagePath">📍 Image Path:</label>
+                        <input type="text" id="imagePath" 
+                               placeholder="uploads/images/20240115_120530_photo.jpg">
+                        <small style="color: #999; margin-top: 5px; display: block;">
+                            Get from upload response above
+                        </small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="visionQuestion">❓ Your Question:</label>
+                        <textarea id="visionQuestion" 
+                                  placeholder="What objects are in this image? What colors are dominant?"></textarea>
+                    </div>
+                    
+                    <div class="button-group">
+                        <button type="submit" class="btn-primary">Ask AI</button>
+                        <button type="reset" class="btn-secondary">Clear</button>
+                    </div>
+                </form>
+                
+                <div id="visionLoading" class="loading">
+                    <div class="spinner"></div>
+                    <p>AI is thinking...</p>
+                </div>
+                
+                <div id="visionResult" class="result">
+                    <h3></h3>
+                    <div id="visionResultContent"></div>
+                </div>
+            </div>
+            
+            <!-- List Images Card -->
+            <div class="card">
+                <h2>📋 Uploaded Images</h2>
+                
+                <p style="color: #666; margin-bottom: 15px;">
+                    View and manage all uploaded images
+                </p>
+                
+                <div class="button-group">
+                    <button id="listImagesBtn" class="btn-primary btn-full">Load Images</button>
+                </div>
+                
+                <div id="listLoading" class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading images...</p>
+                </div>
+                
+                <div id="listResult" class="result">
+                    <h3></h3>
+                    <div id="listResultContent"></div>
+                </div>
+            </div>
+            
+            <!-- API Documentation Card -->
+            <div class="card">
+                <h2>📚 API Guide</h2>
+                
+                <div class="endpoint-list">
+                    <h4>Available Endpoints:</h4>
+                    <ul>
+                        <li><code>POST /ai/upload-image</code> - Upload</li>
+                        <li><code>POST /ai/scan-image</code> - Scan & analyze</li>
+                        <li><code>POST /ai/analyze-image</code> - Analyze existing</li>
+                        <li><code>POST /ai/image-vision</code> - Ask questions</li>
+                        <li><code>GET /ai/image-list</code> - List all</li>
+                        <li><code>DELETE /ai/image-delete/&lt;filename&gt;</code> - Delete</li>
+                    </ul>
+                </div>
+                
+                <div style="background: #e8f5e9; padding: 12px; border-radius: 6px; margin-top: 15px;">
+                    <strong style="color: #2e7d32;">✅ Requires:</strong>
+                    <p style="margin-top: 5px; color: #555;">
+                        OpenAI API key in .env file for advanced vision (GPT-4V)
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>🚀 Chronex AI - The Future is Initialized!</p>
+            <p style="margin-top: 10px; opacity: 0.8;">Created by DEMON ALEX for NEXCHAT</p>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE = 'http://localhost:5000';
+        
+        // Scan Form Handler
+        document.getElementById('scanForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const file = document.getElementById('imageFile').files[0];
+            const justUpload = document.getElementById('justUpload').checked;
+            
+            if (!file) {
+                showResult('scanResult', 'error', 'Error', 'Please select an image file');
+                return;
+            }
+            
+            showLoading('scanLoading', true);
+            
+            try {
+                const formData = new FormData();
+                formData.append('image', file);
+                
+                const endpoint = justUpload ? '/ai/upload-image' : '/ai/scan-image';
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    let content = `<p><strong>File:</strong> ${data.filename}</p>`;
+                    content += `<p><strong>Path:</strong> ${data.filepath}</p>`;
+                    
+                    if (data.analysis) {
+                        content += `<p><strong>Analysis:</strong></p><p>${data.analysis}</p>`;
+                    }
+                    
+                    if (data.analysis_method) {
+                        content += `<p><strong>Method:</strong> ${data.analysis_method}</p>`;
+                    }
+                    
+                    content += `<p><small>${data.timestamp}</small></p>`;
+                    
+                    showResult('scanResult', 'success', '✅ Success', content);
+                    
+                    // Auto-populate vision form
+                    document.getElementById('imagePath').value = data.filepath;
+                } else {
+                    showResult('scanResult', 'error', 'Error', data.error || 'Unknown error');
+                }
+            } catch (error) {
+                showResult('scanResult', 'error', 'Error', error.message);
+            } finally {
+                showLoading('scanLoading', false);
+            }
+        });
+        
+        // Vision Form Handler
+        document.getElementById('visionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const filepath = document.getElementById('imagePath').value;
+            const question = document.getElementById('visionQuestion').value;
+            
+            if (!filepath || !question) {
+                showResult('visionResult', 'error', 'Error', 'Please enter image path and question');
+                return;
+            }
+            
+            showLoading('visionLoading', true);
+            
+            try {
+                const response = await fetch(`${API_BASE}/ai/image-vision`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filepath, question })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    let content = `<p><strong>Question:</strong> ${data.question}</p>`;
+                    content += `<p><strong>Response:</strong></p><p>${data.response}</p>`;
+                    content += `<p><small>Using: OpenAI GPT-4 Vision</small></p>`;
+                    
+                    showResult('visionResult', 'success', '✅ Success', content);
+                } else {
+                    showResult('visionResult', 'error', 'Error', data.error || 'Unknown error');
+                }
+            } catch (error) {
+                showResult('visionResult', 'error', 'Error', error.message);
+            } finally {
+                showLoading('visionLoading', false);
+            }
+        });
+        
+        // List Images Handler
+        document.getElementById('listImagesBtn').addEventListener('click', async () => {
+            showLoading('listLoading', true);
+            
+            try {
+                const response = await fetch(`${API_BASE}/ai/image-list`);
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    let content = `<p><strong>Total Images:</strong> ${data.total_images}</p>`;
+                    
+                    if (data.images && data.images.length > 0) {
+                        content += '<ul style="margin-top: 10px;">';
+                        data.images.forEach(img => {
+                            const sizeKB = (img.size / 1024).toFixed(2);
+                            content += `<li style="margin-bottom: 8px;">
+                                <strong>${img.filename}</strong> (${sizeKB} KB)
+                                <button class="delete-btn" data-filename="${img.filename}" 
+                                        style="margin-left: 10px; padding: 4px 8px; font-size: 0.8em;">
+                                    Delete
+                                </button>
+                            </li>`;
+                        });
+                        content += '</ul>';
+                    } else {
+                        content += '<p style="color: #999;">No images uploaded yet</p>';
+                    }
+                    
+                    showResult('listResult', 'success', '✅ Images Loaded', content);
+                    
+                    // Add delete handlers
+                    document.querySelectorAll('.delete-btn').forEach(btn => {
+                        btn.addEventListener('click', deleteImage);
+                    });
+                } else {
+                    showResult('listResult', 'error', 'Error', data.error || 'Unknown error');
+                }
+            } catch (error) {
+                showResult('listResult', 'error', 'Error', error.message);
+            } finally {
+                showLoading('listLoading', false);
+            }
+        });
+        
+        // Delete Image Handler
+        async function deleteImage(e) {
+            const filename = e.target.dataset.filename;
+            if (!confirm(`Delete ${filename}?`)) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/ai/image-delete/${filename}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('Image deleted successfully');
+                    document.getElementById('listImagesBtn').click(); // Reload list
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+        
+        // Utility Functions
+        function showLoading(id, show) {
+            document.getElementById(id).classList.toggle('show', show);
+        }
+        
+        function showResult(id, type, title, content) {
+            const result = document.getElementById(id);
+            const contentDiv = result.querySelector('h3');
+            const contentBody = result.querySelector('div');
+            
+            result.classList.remove('success', 'error');
+            result.classList.add('show', type);
+            
+            contentDiv.textContent = title;
+            contentBody.innerHTML = content;
+        }
+    </script>
+</body>
+</html>

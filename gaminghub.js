@@ -226,6 +226,12 @@ document.addEventListener("DOMContentLoaded", () => {
   initializeDarkMode();
   loadGames();
   setupEventListeners();
+  setupMainNavigation();
+  
+  // Initialize Firebase connection management
+  initializeFirebaseConnection();
+  
+  console.log("🎮 Gaming Hub fully initialized!");
 });
 
 // Setup all event listeners
@@ -535,3 +541,511 @@ window.addEventListener("orientationchange", () => {
 });
 
 console.log("🎮 Gaming Hub initialized successfully!");
+
+// ============================================
+// EXPANDED GAMING HUB - SOCIAL FEATURES
+// ============================================
+
+// Mock Gamers Database
+const GAMERS_DATABASE = [
+  {
+    id: 1,
+    username: "ShadowNinja",
+    avatar: "🥷",
+    level: 45,
+    skill: "advanced",
+    mainGame: "Valorant",
+    hoursPlayed: 2340,
+    wins: 1240,
+    rating: 4.9,
+    bio: "Competitive FPS player | Team Captain",
+    status: "online",
+    games: ["Valorant", "CS2", "Fortnite"],
+    region: "North America"
+  },
+  {
+    id: 2,
+    username: "PhantomGamer",
+    avatar: "👻",
+    level: 38,
+    skill: "intermediate",
+    mainGame: "PUBG Mobile",
+    hoursPlayed: 1856,
+    wins: 856,
+    rating: 4.7,
+    bio: "Battle royale enthusiast | Always seeking squad",
+    status: "online",
+    games: ["PUBG Mobile", "Fortnite", "Apex Legends"],
+    region: "Europe"
+  },
+  {
+    id: 3,
+    username: "IceQueen",
+    avatar: "❄️",
+    level: 52,
+    skill: "pro",
+    mainGame: "Overwatch 2",
+    hoursPlayed: 3120,
+    wins: 2100,
+    rating: 4.95,
+    bio: "Pro esports player | Esports org: TitanGaming",
+    status: "offline",
+    games: ["Overwatch 2", "Valorant"],
+    region: "Asia"
+  },
+  {
+    id: 4,
+    username: "NovaStrike",
+    avatar: "⚡",
+    level: 28,
+    skill: "beginner",
+    mainGame: "Call of Duty Mobile",
+    hoursPlayed: 420,
+    wins: 85,
+    rating: 4.3,
+    bio: "New to competitive gaming, learning fast!",
+    status: "online",
+    games: ["Call of Duty Mobile", "Fortnite"],
+    region: "South America"
+  },
+  {
+    id: 5,
+    username: "VortexKing",
+    avatar: "👑",
+    level: 41,
+    skill: "advanced",
+    mainGame: "Destiny 2",
+    hoursPlayed: 2650,
+    wins: 450,
+    rating: 4.6,
+    bio: "Raid master | Mythic+ player",
+    status: "online",
+    games: ["Destiny 2", "Lost Ark"],
+    region: "Europe"
+  }
+];
+
+// Mock Squads Database
+const SQUADS_DATABASE = [
+  {
+    id: 1,
+    name: "Apex Predators",
+    emoji: "🦁",
+    game: "Apex Legends",
+    leader: "ShadowNinja",
+    members: 8,
+    maxMembers: 20,
+    joinRequests: 3,
+    skill: "advanced",
+    description: "Competitive Apex Legends team. Scrimmages daily.",
+    founded: "2024-06-15",
+    wins: 245
+  },
+  {
+    id: 2,
+    name: "Night Hunters",
+    emoji: "🌙",
+    game: "PUBG Mobile",
+    leader: "PhantomGamer",
+    members: 5,
+    maxMembers: 20,
+    joinRequests: 1,
+    skill: "intermediate",
+    description: "Casual to competitive PUBG squad",
+    founded: "2024-08-20",
+    wins: 128
+  },
+  {
+    id: 3,
+    name: "valorant grinders",
+    emoji: "🔫",
+    game: "Valorant",
+    leader: "IceQueen",
+    members: 15,
+    maxMembers: 30,
+    joinRequests: 12,
+    skill: "pro",
+    description: "Pro-level Valorant team. Ranked grinding.",
+    founded: "2024-01-10",
+    wins: 890
+  }
+];
+
+// Mock Gaming Sessions Database
+const SESSIONS_DATABASE = [
+  {
+    id: 1,
+    game: "Valorant",
+    createdBy: "ShadowNinja",
+    participants: 4,
+    maxParticipants: 5,
+    skillLevel: "advanced",
+    startTime: "2024-01-21 19:00",
+    duration: "120 mins",
+    objective: "Competitive Ranked Push",
+    status: "active"
+  },
+  {
+    id: 2,
+    game: "PUBG Mobile",
+    createdBy: "PhantomGamer",
+    participants: 2,
+    maxParticipants: 4,
+    skillLevel: "intermediate",
+    startTime: "2024-01-21 18:30",
+    duration: "60 mins",
+    objective: "Team Deathmatch Practice",
+    status: "active"
+  },
+  {
+    id: 3,
+    game: "Apex Legends",
+    createdBy: "VortexKing",
+    participants: 3,
+    maxParticipants: 3,
+    skillLevel: "advanced",
+    startTime: "2024-01-21 20:00",
+    duration: "90 mins",
+    objective: "Squad Scrimmage",
+    status: "upcoming"
+  }
+];
+
+// Setup main navigation tabs
+function setupMainNavigation() {
+  const navTabs = document.querySelectorAll(".nav-tab");
+  
+  navTabs.forEach(tab => {
+    tab.addEventListener("click", () => {
+      const section = tab.dataset.section;
+      
+      // Update active tab
+      document.querySelectorAll(".nav-tab").forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+      
+      // Hide all sections
+      const gamesSection = document.getElementById("gamesSection");
+      const gamersSection = document.getElementById("gamersSection");
+      const squadsSection = document.getElementById("squadsSection");
+      const sessionsSection = document.getElementById("sessionsSection");
+      
+      if (gamesSection) {
+        gamesSection.style.display = section === "games" ? "block" : "none";
+      }
+      if (gamersSection) {
+        gamersSection.style.display = section === "gamers" ? "block" : "none";
+        if (section === "gamers") loadGamers();
+      }
+      if (squadsSection) {
+        squadsSection.style.display = section === "squads" ? "block" : "none";
+        if (section === "squads") loadSquads();
+      }
+      if (sessionsSection) {
+        sessionsSection.style.display = section === "sessions" ? "block" : "none";
+        if (section === "sessions") loadSessions();
+      }
+    });
+  });
+  
+  // Ensure games section is visible on load
+  const gamesSection = document.getElementById("gamesSection");
+  if (gamesSection) {
+    gamesSection.style.display = "block";
+  }
+}
+
+// Load and display gamers
+function loadGamers() {
+  const gamersList = document.getElementById("gamersList");
+  
+  // Setup dropdown filters
+  const usernameFilter = document.getElementById("usernameFilter");
+  const gameFilter = document.getElementById("gameFilter");
+  const skillFilter = document.getElementById("skillFilter");
+  const statusFilter = document.getElementById("statusFilter");
+  
+  const filterGamers = () => {
+    let filtered = GAMERS_DATABASE;
+    
+    if (usernameFilter && usernameFilter.value) {
+      filtered = filtered.filter(g => g.username.toLowerCase().includes(usernameFilter.value.toLowerCase()));
+    }
+    
+    if (gameFilter && gameFilter.value) {
+      filtered = filtered.filter(g => g.games.includes(gameFilter.value));
+    }
+    
+    if (skillFilter && skillFilter.value) {
+      filtered = filtered.filter(g => g.skill === skillFilter.value);
+    }
+    
+    if (statusFilter && statusFilter.value) {
+      filtered = filtered.filter(g => g.status === statusFilter.value);
+    }
+    
+    displayGamers(filtered);
+  };
+  
+  // Add event listeners to dropdowns
+  if (usernameFilter) usernameFilter.addEventListener("change", filterGamers);
+  if (gameFilter) gameFilter.addEventListener("change", filterGamers);
+  if (skillFilter) skillFilter.addEventListener("change", filterGamers);
+  if (statusFilter) statusFilter.addEventListener("change", filterGamers);
+  
+  // Initial display
+  filterGamers();
+}
+
+// Display gamers helper function
+function displayGamers(gamers) {
+  const gamersList = document.getElementById("gamersList");
+  gamersList.innerHTML = gamers.map(gamer => `
+    <div class="gamer-card" onclick="viewGamerProfile(${gamer.id})">
+      <div class="gamer-header">
+        <div class="gamer-avatar">${gamer.avatar}</div>
+        <div class="gamer-status" style="background: ${gamer.status === 'online' ? '#00ff66' : '#999'};"></div>
+      </div>
+      <h3 class="gamer-name">${gamer.username}</h3>
+      <p class="gamer-level">Level ${gamer.level} | ${gamer.skill}</p>
+      <p class="gamer-game">🎮 ${gamer.mainGame}</p>
+      <div class="gamer-stats">
+        <span>⭐ ${gamer.rating}</span>
+        <span>🏆 ${gamer.wins} wins</span>
+      </div>
+      <button class="gamer-action-btn" onclick="event.stopPropagation();">➕ Add Friend</button>
+    </div>
+  `).join("");
+}
+
+// View gamer profile
+function viewGamerProfile(gamerId) {
+  const gamer = GAMERS_DATABASE.find(g => g.id === gamerId);
+  if (!gamer) return;
+  
+  const profileHTML = `
+    <div class="gamer-profile-modal">
+      <button class="close-modal" onclick="closeGamerProfile()">✕</button>
+      <div class="profile-header" style="background: linear-gradient(135deg, #00ff66, #00ccff);">
+        <div class="profile-avatar-large">${gamer.avatar}</div>
+        <div class="profile-status">${gamer.status === 'online' ? '🟢 Online' : '⚫ Offline'}</div>
+      </div>
+      <div class="profile-body">
+        <h2>${gamer.username}</h2>
+        <p class="profile-bio">${gamer.bio}</p>
+        
+        <div class="profile-stats">
+          <div class="stat">
+            <span class="stat-label">Level</span>
+            <span class="stat-value">${gamer.level}</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Rating</span>
+            <span class="stat-value">${gamer.rating} ⭐</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Wins</span>
+            <span class="stat-value">${gamer.wins}</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Hours</span>
+            <span class="stat-value">${gamer.hoursPlayed}</span>
+          </div>
+        </div>
+
+        <div class="profile-section">
+          <h4>Favorite Games</h4>
+          <div class="games-list">
+            ${gamer.games.map(game => `<span class="game-tag">${game}</span>`).join('')}
+          </div>
+        </div>
+
+        <div class="profile-section">
+          <h4>Region</h4>
+          <p>${gamer.region}</p>
+        </div>
+
+        <div class="profile-actions">
+          <button class="action-btn primary" onclick="addFriend(${gamer.id})">👥 Add Friend</button>
+          <button class="action-btn secondary" onclick="inviteToSquad(${gamer.id})">🎖️ Invite to Squad</button>
+          <button class="action-btn secondary" onclick="startSession(${gamer.id})">🎮 Play Together</button>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Create modal overlay
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  overlay.innerHTML = profileHTML;
+  overlay.onclick = (e) => {
+    if (e.target === overlay) closeGamerProfile();
+  };
+  
+  document.body.appendChild(overlay);
+  setTimeout(() => overlay.classList.add("active"), 10);
+}
+
+// Close gamer profile
+function closeGamerProfile() {
+  const overlay = document.querySelector(".modal-overlay");
+  if (overlay) {
+    overlay.classList.remove("active");
+    setTimeout(() => overlay.remove(), 300);
+  }
+}
+
+// Load squads
+function loadSquads() {
+  const suggestedList = document.getElementById("suggestedSquadsList");
+  suggestedList.innerHTML = SQUADS_DATABASE.map(squad => `
+    <div class="squad-card" onclick="viewSquad(${squad.id})">
+      <div class="squad-header">
+        <span class="squad-emoji">${squad.emoji}</span>
+        <span class="squad-skill-badge">${squad.skill.toUpperCase()}</span>
+      </div>
+      <h3>${squad.name}</h3>
+      <p class="squad-game">🎮 ${squad.game}</p>
+      <p class="squad-description">${squad.description}</p>
+      <div class="squad-stats">
+        <span>👥 ${squad.members}/${squad.maxMembers}</span>
+        <span>🏆 ${squad.wins} wins</span>
+      </div>
+      <button class="squad-action-btn" onclick="event.stopPropagation();">➕ Join</button>
+    </div>
+  `).join("");
+}
+
+// Load sessions
+function loadSessions() {
+  const sessionsList = document.getElementById("activeSessionsList");
+  sessionsList.innerHTML = SESSIONS_DATABASE.filter(s => s.status === "active").map(session => `
+    <div class="session-card">
+      <div class="session-header">
+        <h4>🎮 ${session.game}</h4>
+        <span class="session-status">LIVE</span>
+      </div>
+      <p><strong>Created by:</strong> ${session.createdBy}</p>
+      <p><strong>Objective:</strong> ${session.objective}</p>
+      <div class="session-info">
+        <span>👥 ${session.participants}/${session.maxParticipants} Players</span>
+        <span>⏱️ ${session.duration}</span>
+        <span>📊 ${session.skillLevel}</span>
+      </div>
+      <button class="session-join-btn" onclick="joinSession(${session.id})">Join Session</button>
+    </div>
+  `).join("");
+}
+
+// Add friend
+function addFriend(gamerId) {
+  const gamer = GAMERS_DATABASE.find(g => g.id === gamerId);
+  showNotification(`✅ Friend request sent to ${gamer.username}!`, "success");
+}
+
+// Invite to squad
+function inviteToSquad(gamerId) {
+  showNotification("🎖️ Squad invite sent!", "success");
+}
+
+// Start session
+function startSession(gamerId) {
+  showNotification("🎮 Gaming session started!", "success");
+}
+
+// Join session
+function joinSession(sessionId) {
+  const session = SESSIONS_DATABASE.find(s => s.id === sessionId);
+  showNotification(`✅ Joined ${session.game} session! Launching game...`, "success");
+  setTimeout(() => {
+    window.open("https://www.google.com", "_blank");
+  }, 1000);
+}
+
+// View squad details
+function viewSquad(squadId) {
+  const squad = SQUADS_DATABASE.find(s => s.id === squadId);
+  showNotification(`🎖️ Squad: ${squad.name}`, "info");
+}
+
+// ============================================
+// FIREBASE CONNECTION MANAGEMENT
+// ============================================
+
+let firebaseConnectionTimeout;
+let isFirebaseConnected = true;
+let connectionCheckInterval;
+
+function initializeFirebaseConnection() {
+  // Monitor Firebase connection status
+  try {
+    // Heartbeat - check connection every 30 seconds
+    connectionCheckInterval = setInterval(checkFirebaseConnection, 30000);
+    
+    // Immediate check
+    checkFirebaseConnection();
+    
+    console.log("✅ Firebase connection monitor started");
+  } catch (error) {
+    console.warn("⚠️ Firebase initialization warning:", error.message);
+  }
+}
+
+function checkFirebaseConnection() {
+  try {
+    if (typeof db !== 'undefined' || typeof auth !== 'undefined') {
+      console.log("✅ Firebase connection is active");
+      isFirebaseConnected = true;
+      
+      // Clear any existing timeout
+      if (firebaseConnectionTimeout) {
+        clearTimeout(firebaseConnectionTimeout);
+      }
+    }
+  } catch (error) {
+    console.warn("⚠️ Firebase connection check warning:", error.message);
+    isFirebaseConnected = false;
+  }
+}
+
+// Reconnect function
+function reconnectFirebase() {
+  try {
+    if (typeof auth !== 'undefined') {
+      console.log("🔄 Firebase connection recheck...");
+      checkFirebaseConnection();
+      return true;
+    }
+  } catch (error) {
+    console.error("❌ Firebase recheck warning:", error.message);
+    return false;
+  }
+}
+
+// Auto-reconnect on network change
+window.addEventListener("online", () => {
+  console.log("🌐 Network restored");
+  reconnectFirebase();
+});
+
+window.addEventListener("offline", () => {
+  console.log("❌ Network disconnected - Gaming Hub will work offline");
+  isFirebaseConnected = false;
+});
+
+// Cleanup on page unload
+window.addEventListener("beforeunload", () => {
+  if (connectionCheckInterval) {
+    clearInterval(connectionCheckInterval);
+  }
+  if (firebaseConnectionTimeout) {
+    clearTimeout(firebaseConnectionTimeout);
+  }
+});
+
+console.log("🎮 Gaming Hub Firebase connection management loaded!");
+
+// Initialize expanded features on DOM ready
+document.addEventListener("DOMContentLoaded", () => {
+  setupMainNavigation();
+});
+

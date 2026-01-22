@@ -1161,6 +1161,8 @@ html, body {
   z-index: 30;
   flex-shrink: 0;
   gap: 8px;
+  width: 100%;
+  flex-wrap: nowrap;
 }
 
 .back-btn {
@@ -1205,6 +1207,9 @@ html, body {
   min-width: 44px;
   height: 44px;
   font-weight: bold;
+  flex-shrink: 0;
+  z-index: 40;
+  visibility: visible !important;
 }
 
 .three-dots-menu:hover {

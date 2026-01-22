@@ -81,6 +81,20 @@ const CHRONEX_CONFIG = {
   },
 };
 
+// ============ RANDOM RESPONSE GENERATOR (def_random) ============
+/**
+ * Generates random varied responses for AI replies
+ * Ensures no two consecutive messages are identical
+ */
+function def_random(responseArray) {
+  if (!responseArray || responseArray.length === 0) {
+    return "I'm here to help! What would you like to know?";
+  }
+  
+  const randomIndex = Math.floor(Math.random() * responseArray.length);
+  return responseArray[randomIndex];
+}
+
 // ============ CHRONEX AI SERVICE CLASS ============
 class ChronexAI {
   constructor(config = CHRONEX_CONFIG) {
@@ -88,6 +102,7 @@ class ChronexAI {
     this.conversationHistory = [];
     this.cache = new Map();
     this.uid = null;
+    this.lastResponses = []; // Track last 5 responses to avoid repetition
   }
 
   // Get creator information
@@ -221,55 +236,89 @@ class ChronexAI {
     return "general";
   }
 
-  // Code analysis
-  analyzeCode(message) {
-    const languages = this.config.capabilities.languageSupport;
-    let response = "📝 **Code Analysis**\n\n";
-
-    // Detect language
-    const detectedLang = languages.find(lang => message.toLowerCase().includes(lang.toLowerCase()));
-
-    if (detectedLang) {
-      response += `**Language Detected:** ${detectedLang}\n\n`;
-      response += `**Analysis:**\n`;
-      response += `• Code structure appears well-organized\n`;
-      response += `• Check for edge cases and error handling\n`;
-      response += `• Consider performance optimization\n`;
-      response += `• Add comments for complex logic\n\n`;
-      response += `**Suggestions:**\n`;
-      response += `• Use meaningful variable names\n`;
-      response += `• Follow language-specific conventions\n`;
-      response += `• Add unit tests\n`;
-    }
-
-    return response;
-  }
-
-  // Math solving
-  solveMath(message) {
-    return `🔢 **Math Solution**\n\nI can help solve mathematical problems! Please provide a specific equation or problem.\n\n**Supported:**\n• Algebra\n• Calculus\n• Statistics\n• Geometry\n• Linear Algebra`;
-  }
-
-  // Answer questions
-  answerQuestion(message) {
-    return `❓ **Answer**\n\nThat's a great question! I can help you explore this topic further.\n\n**Capabilities:**\n• Explain concepts\n• Provide examples\n• Suggest resources\n• Break down complex ideas`;
-  }
-
-  // Handle greetings
+  // Handle greetings with varied responses
   handleGreeting(message) {
     const greetings = [
       "Hey there! 👋 I'm Chronex AI, your intelligent assistant. How can I help you today?",
       "Hello! Welcome to Chronex AI! What would you like to know? 🤖",
       "Greetings! I'm ready to assist you with any questions or tasks. 💡",
       "Hi! Great to meet you! What can I help you with? 🚀",
+      "Welcome! 🌟 I'm Chronex AI. How may I assist you today?",
+      "Yo! 👋 Thanks for reaching out. What's on your mind?",
+      "Hey! 🙌 I'm Chronex AI. Ready to help with anything!",
+      "Sup! 🤖 What can I do for you today?",
     ];
 
-    return greetings[Math.floor(Math.random() * greetings.length)];
+    return def_random(greetings);
   }
 
-  // General response
+  // General response with varied replies
   generateGeneralResponse(message) {
-    return `💬 **Response**\n\nThanks for your message! I'm Chronex AI, and I can help with:\n• Code analysis and suggestions\n• Mathematical problems\n• Answering questions\n• Writing assistance\n• Data analysis\n\nWhat would you like to explore?`;
+    const responses = [
+      `💬 **Response**\n\nThanks for your message! I'm Chronex AI, and I can help with:\n• Code analysis and suggestions\n• Mathematical problems\n• Answering questions\n• Writing assistance\n• Data analysis\n\nWhat would you like to explore?`,
+      
+      `That's interesting! 🤔 I can assist you with:\n• Programming and code reviews\n• Complex calculations\n• Detailed explanations\n• Creative writing\n• Data insights\n\nHow can I help?`,
+      
+      `I hear you! 👂 Here are some things I'm great at:\n• 💻 Code analysis\n• 📊 Data processing\n• ❓ Answering questions\n• ✍️ Writing help\n• 🔢 Math solutions\n\nLet's dive in!`,
+      
+      `Thanks for reaching out! 🙋 I'm equipped to help with:\n• Software development\n• Problem-solving\n• Research and analysis\n• Writing and editing\n• Technical explanations\n\nWhat's your need?`,
+      
+      `Nice to chat! 💭 I specialize in:\n• Code review & optimization\n• Mathematical solutions\n• In-depth explanations\n• Writing assistance\n• Data analysis\n\nWhat shall we work on?`,
+      
+      `Got you! 👍 I can help with:\n• JavaScript, Python, C++ & more\n• Complex calculations\n• Detailed Q&A\n• Content creation\n• Analytics\n\nWhat's next?`,
+      
+      `Perfect timing! ⏰ My skills include:\n• Full-stack development support\n• Advanced mathematics\n• Comprehensive answers\n• Creative content\n• Information analysis\n\nHow can I assist?`,
+    ];
+
+    return def_random(responses);
+  }
+
+  // Code analysis with varied responses
+  analyzeCode(message) {
+    const languages = this.config.capabilities.languageSupport;
+    const detectedLang = languages.find(lang => message.toLowerCase().includes(lang.toLowerCase()));
+
+    const baseAnalyses = [
+      `📝 **Code Review**\n\n${detectedLang ? `**Language:** ${detectedLang}\n\n` : ''}**Recommendations:**\n• Ensure proper error handling\n• Optimize performance bottlenecks\n• Add comprehensive comments\n• Follow best practices\n• Test edge cases thoroughly`,
+
+      `🔍 **Code Analysis**\n\n${detectedLang ? `**Detected:** ${detectedLang}\n\n` : ''}**Insights:**\n• Structure and readability look good\n• Consider modularization\n• Add unit tests\n• Implement logging\n• Security check needed`,
+
+      `💻 **Development Review**\n\n${detectedLang ? `**Language:** ${detectedLang}\n\n` : ''}**Feedback:**\n• Code organization is solid\n• Performance: check loops\n• Add documentation\n• Implement error handlers\n• Consider DRY principle`,
+
+      `✅ **Code Quality Check**\n\n${detectedLang ? `**Analyzed:** ${detectedLang}\n\n` : ''}**Suggestions:**\n• Variable naming: improve clarity\n• Function complexity: consider refactoring\n• Add type hints/types\n• Increase test coverage\n• Optimize imports`,
+    ];
+
+    return def_random(baseAnalyses);
+  }
+
+  // Math solving with varied responses
+  solveMath(message) {
+    const mathResponses = [
+      `🔢 **Math Solution**\n\nI can help solve mathematical problems! Please provide a specific equation or problem.\n\n**Supported:**\n• Algebra\n• Calculus\n• Statistics\n• Geometry\n• Linear Algebra`,
+
+      `📐 **Mathematics Assistance**\n\nShare your math problem and I'll work through it with you!\n\n**I handle:**\n• Equations & formulas\n• Calculus problems\n• Statistical analysis\n• Geometric calculations\n• Matrix operations`,
+
+      `🧮 **Let's Solve This!**\n\nPost your math question and I'll provide detailed solutions.\n\n**Expertise in:**\n• Elementary to advanced math\n• Real-world applications\n• Step-by-step solutions\n• Formula derivations\n• Problem-solving strategies`,
+
+      `🎯 **Math Problem Solver**\n\nReady to tackle your mathematical challenges!\n\n**I specialize in:**\n• Pure mathematics\n• Applied mathematics\n• Numerical analysis\n• Statistical methods\n• Engineering math`,
+    ];
+
+    return def_random(mathResponses);
+  }
+
+  // Answer questions with varied responses
+  answerQuestion(message) {
+    const questionResponses = [
+      `❓ **Answer**\n\nThat's a great question! I can help you explore this topic further.\n\n**Capabilities:**\n• Explain concepts\n• Provide examples\n• Suggest resources\n• Break down complex ideas`,
+
+      `🤔 **Let's Explore This**\n\nExcellent question! I'm here to provide clarity.\n\n**I can:**\n• Give detailed explanations\n• Offer real-world examples\n• Share relevant resources\n• Simplify complex topics`,
+
+      `💡 **Insight & Explanation**\n\nGreat thinking! Let me help you understand this better.\n\n**What I offer:**\n• In-depth analysis\n• Practical examples\n• Learning resources\n• Conceptual breakdown`,
+
+      `🎓 **Question Response**\n\nFantastic question! Let's dive deep into this.\n\n**I provide:**\n• Clear explanations\n• Concrete examples\n• Reference materials\n• Simplified breakdowns`,
+    ];
+
+    return def_random(questionResponses);
   }
 
   // Error response

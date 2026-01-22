@@ -31,6 +31,15 @@ service cloud.firestore {
       );
     }
     
+    // ============================================================
+    // ADMIN CHECK - FIX FOR DASHBOARD ACCESS
+    // ============================================================
+    function isSuperAdmin() {
+      // Direct check without needing user document
+      return isAuthenticated() && 
+             request.auth.uid in ['demonalexander526@gmail.com'];
+    }
+    
     // Check if user is blocked
     function isBlocked(otherUserId) {
       return request.auth.uid in get(/databases/$(database)/documents/users/$(otherUserId)).data.blockedUsers;
@@ -96,6 +105,9 @@ service cloud.firestore {
       // Other authenticated users can read public user data (username, status, profile pic)
       allow read: if isAuthenticated();
       
+      // ADMINS can read and manage all users
+      allow read, write: if isSuperAdmin();
+      
       // Users can create their own profile (during signup)
       allow create: if isOwner(uid) && 
                        isValidUserData() &&
@@ -128,6 +140,9 @@ service cloud.firestore {
       
       // All authenticated users can read all groups (filtered by app logic)
       allow read: if isAuthenticated();
+      
+      // ADMINS can read and manage all groups
+      allow read, write: if isSuperAdmin();
       
       // Only admins can update group settings
       allow update: if isAuthenticated() && 
@@ -192,6 +207,9 @@ service cloud.firestore {
                      (request.auth.uid == resource.data.from || 
                       request.auth.uid == resource.data.to);
       
+      // ADMINS can read and manage all messages
+      allow read, write: if isSuperAdmin();
+      
       // Only sender can edit their message (within 1 hour)
       allow update: if isOwner(resource.data.from) &&
                        request.time < resource.data.time.toMillis() + 3600000 &&
@@ -211,6 +229,9 @@ service cloud.firestore {
     match /statuses/{statusId} {
       allow read: if isAuthenticated();
       
+      // ADMINS can read and manage
+      allow read, write: if isSuperAdmin();
+      
       allow create: if isAuthenticated() &&
                        request.resource.data.userId == request.auth.uid &&
                        request.resource.data.expiresAt > request.time;
@@ -227,6 +248,9 @@ service cloud.firestore {
       allow read: if isAuthenticated() && 
                      resource.data.status == 'active' &&
                      resource.data.expiresAt > request.time;
+      
+      // ADMINS can read and manage all ads
+      allow read, write: if isSuperAdmin();
       
       // Authenticated users can create advertisements (with token validation)
       allow create: if isAuthenticated() && 
@@ -278,6 +302,10 @@ service cloud.firestore {
                        request.resource.data.reportedBy == request.auth.uid;
       
       allow read: if isOwner(resource.data.reportedBy);
+      
+      // ADMINS can read and manage all reports
+      allow read, write: if isSuperAdmin();
+      
       allow update, delete: if false;
     }
     
@@ -287,6 +315,9 @@ service cloud.firestore {
     match /blockedUsers/{blockId} {
       allow read, write: if isAuthenticated() &&
                             request.resource.data.userId == request.auth.uid;
+      
+      // ADMINS can manage blocked users
+      allow read, write: if isSuperAdmin();
     }
     
     // ============================================================
@@ -578,6 +609,9 @@ service cloud.firestore {
                      (request.auth.uid == resource.data.callerId ||
                       request.auth.uid == resource.data.receiverId);
       
+      // ADMINS can read all calls
+      allow read: if isSuperAdmin();
+      
       // Both parties can update call status (answer/reject/end/mute/hold)
       allow update: if isAuthenticated() &&
                        (request.auth.uid == resource.data.callerId ||
@@ -623,6 +657,9 @@ service cloud.firestore {
       allow read: if isAuthenticated() &&
                      (request.auth.uid == resource.data.callerId ||
                       request.auth.uid == resource.data.receiverId);
+      
+      // ADMINS can read all calls
+      allow read: if isSuperAdmin();
       
       // Both parties can update (answer/reject/end/camera on/off/mic on/off)
       allow update: if isAuthenticated() &&
