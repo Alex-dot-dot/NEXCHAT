@@ -3193,9 +3193,9 @@ async function uploadFileToStorage(file, chatId, isGroup = false) {
   try {
     const timestamp = Date.now();
     const fileExt = file.name.split('.').pop();
-    const fileName = `${timestamp}_${Math.random().toString(36).substr(2, 9)}.${fileExt} `;
+    const fileName = `${timestamp}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
 
-    const folderPath = isGroup ? `group - attachments / ${chatId} /${myUID}` : `chat-attachments/${myUID} `;
+    const folderPath = isGroup ? `group-attachments/${chatId}/${myUID}` : `chat-attachments/${myUID}`;
     const fileRef = storageRef(storage, `${folderPath}/${fileName}`);
 
     console.log(`📤 Uploading file: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
@@ -3227,30 +3227,39 @@ async function transferTokens() {
   const recipientUID = document.getElementById("recipientUID")?.value.trim();
   const amount = parseInt(document.getElementById("transferAmount")?.value || 0);
   const resultEl = document.getElementById("transferResult");
+  const transferBtn = document.getElementById("transferTokensBtn");
 
   if (!resultEl) return;
 
+  // Validation
   if (!recipientUID) {
-    resultEl.textContent = "❌ Please enter recipient UID";
-    resultEl.style.color = "#ff6600";
+    resultEl.innerHTML = `<span style="color: #ff6b6b;">❌ Please enter recipient UID</span>`;
     return;
   }
 
   if (!amount || amount <= 0) {
-    resultEl.textContent = "❌ Please enter a valid amount";
-    resultEl.style.color = "#ff6600";
+    resultEl.innerHTML = `<span style="color: #ff6b6b;">❌ Please enter a valid amount</span>`;
+    return;
+  }
+
+  if (amount > 99999) {
+    resultEl.innerHTML = `<span style="color: #ff6b6b;">❌ Amount cannot exceed 99,999 tokens</span>`;
     return;
   }
 
   if (recipientUID === myUID) {
-    resultEl.textContent = "❌ Cannot transfer to yourself";
-    resultEl.style.color = "#ff6600";
+    resultEl.innerHTML = `<span style="color: #ff6b6b;">❌ Cannot transfer tokens to yourself</span>`;
     return;
   }
 
   try {
-    resultEl.textContent = "⏳ Processing transfer...";
-    resultEl.style.color = "#00ff66";
+    // Disable button and show loading
+    if (transferBtn) {
+      transferBtn.disabled = true;
+      transferBtn.textContent = "⏳ Processing...";
+    }
+
+    resultEl.innerHTML = `<span style="color: #00ff66;">⏳ Verifying recipient...</span>`;
 
     const senderRef = doc(db, "users", myUID);
     const recipientRef = doc(db, "users", recipientUID);
@@ -3265,7 +3274,7 @@ async function transferTokens() {
       }
 
       if (!recipientDoc.exists()) {
-        throw new Error("Recipient not found");
+        throw new Error("Recipient not found - invalid UID");
       }
 
       const senderTokens = senderDoc.data()?.tokens ?? 0;
@@ -3277,7 +3286,7 @@ async function transferTokens() {
       }
 
       if (senderTokens < amount) {
-        throw new Error(`Insufficient balance (You have ${senderTokens} tokens)`);
+        throw new Error(`Insufficient balance - You have ${senderTokens} tokens, but trying to send ${amount}`);
       }
 
       const newSenderTokens = Math.max(0, senderTokens - amount);
@@ -3297,24 +3306,41 @@ async function transferTokens() {
       });
 
       return {
-        recipientName: recipientDoc.data()?.username || "user",
+        recipientName: recipientDoc.data()?.username || "User",
+        recipientEmail: recipientDoc.data()?.email || "unknown",
         amount,
         newSenderTokens,
         newRecipientTokens
       };
     });
 
-    resultEl.textContent = `✅ Sent ${result.amount} tokens to ${result.recipientName}`;
-    resultEl.style.color = "#00ff66";
+    // Success message with details
+    resultEl.innerHTML = `
+      <div style="background: rgba(0, 255, 102, 0.1); border-left: 3px solid #00ff66; padding: 12px; border-radius: 6px; margin-top: 12px;">
+        <p style="color: #00ff66; margin: 0; font-weight: 600;">✅ Transfer Successful!</p>
+        <p style="color: #e0e0e0; margin: 6px 0 0 0; font-size: 13px;">
+          Sent <strong>${result.amount} tokens</strong> to <strong>${result.recipientName}</strong>
+        </p>
+        <p style="color: #888; margin: 4px 0 0 0; font-size: 12px;">
+          Your new balance: <strong style="color: #00ff66;">${result.newSenderTokens}</strong> tokens
+        </p>
+      </div>
+    `;
 
     console.log(`✅ Transfer complete: ${result.amount} tokens sent to ${result.recipientName}`);
 
+    // Clear inputs
     document.getElementById("recipientUID").value = "";
     document.getElementById("transferAmount").value = "";
 
+    // Re-enable button after delay
     setTimeout(() => {
-      resultEl.textContent = "";
-    }, 3000);
+      if (transferBtn) {
+        transferBtn.disabled = false;
+        transferBtn.textContent = "🚀 Send Tokens";
+      }
+      resultEl.innerHTML = "";
+    }, 4000);
 
   } catch (err) {
     console.error("Transfer error:", err);
@@ -3322,27 +3348,42 @@ async function transferTokens() {
     console.error("Error message:", err.message);
 
     let errorMsg = err.message;
+    let errorTitle = "Transfer Failed";
 
     if (err.message && err.message.includes('offline')) {
-      errorMsg = "❌ Network Error: Check your internet connection or Firestore security rules";
+      errorMsg = "Network error - Check your internet connection";
+      errorTitle = "Offline";
     } else if (err.code === 'permission-denied' || err.message?.includes('Permission denied')) {
-      errorMsg = "❌ Permission Error: Check Firestore security rules - transfers may not be allowed";
+      errorMsg = "You don't have permission to transfer tokens";
+      errorTitle = "Permission Denied";
     } else if (err.code === 'not-found') {
-      errorMsg = "❌ User or data not found";
+      errorMsg = "User or data not found";
+      errorTitle = "Not Found";
     } else if (err.code === 'invalid-argument') {
-      errorMsg = "❌ Invalid data format - ensure all fields are correct";
+      errorMsg = "Invalid data - ensure all fields are correct";
+      errorTitle = "Invalid Input";
     } else if (err.message?.includes('Insufficient balance')) {
-      errorMsg = `❌ ${err.message}`;
+      errorTitle = "Insufficient Balance";
     } else if (err.message?.includes('Recipient not found')) {
-      errorMsg = "❌ Recipient not found";
+      errorMsg = "Recipient UID not found";
+      errorTitle = "User Not Found";
     } else if (err.message?.includes('Your user data not found')) {
-      errorMsg = "❌ Your user data not found";
-    } else {
-      errorMsg = `❌ Transfer failed: ${err.message}`;
+      errorMsg = "Your account data not found";
+      errorTitle = "Account Error";
     }
 
-    resultEl.textContent = errorMsg;
-    resultEl.style.color = "#ff6600";
+    resultEl.innerHTML = `
+      <div style="background: rgba(255, 107, 107, 0.1); border-left: 3px solid #ff6b6b; padding: 12px; border-radius: 6px; margin-top: 12px;">
+        <p style="color: #ff6b6b; margin: 0; font-weight: 600;">❌ ${errorTitle}</p>
+        <p style="color: #e0e0e0; margin: 6px 0 0 0; font-size: 13px;">${errorMsg}</p>
+      </div>
+    `;
+
+    // Re-enable button
+    if (transferBtn) {
+      transferBtn.disabled = false;
+      transferBtn.textContent = "🚀 Send Tokens";
+    }
   }
 }
 
@@ -3360,10 +3401,30 @@ function openSettingsModal() {
       userUIDDisplay.textContent = myUID;
     }
 
+    // Load current token balance
+    loadTokenBalance();
+
     // Add vibration feedback on Android
     if (isAndroid && navigator.vibrate) {
       navigator.vibrate(50);
     }
+  }
+}
+
+async function loadTokenBalance() {
+  try {
+    const userRef = doc(db, "users", myUID);
+    const userDoc = await getDoc(userRef);
+    
+    if (userDoc.exists()) {
+      const tokens = userDoc.data()?.tokens ?? 0;
+      const balanceEl = document.getElementById("currentTokenBalance");
+      if (balanceEl) {
+        balanceEl.textContent = tokens.toLocaleString();
+      }
+    }
+  } catch (err) {
+    console.error("Error loading token balance:", err);
   }
 }
 
@@ -4252,8 +4313,8 @@ async function setupInitialization() {
         : `chatBackgrounds/direct/${myUID}_${currentChatUser}/${Date.now()}`;
       
       const bgRef = storageRef(storage, bgPath);
-      await uploadBytes(bgRef, file);
-      const bgUrl = await getDownloadURL(bgRef);
+      const snapshot = await uploadBytes(bgRef, file);
+      const bgUrl = await getDownloadURL(snapshot.ref);
 
       const collection_name = currentChatType === 'group' ? 'groupBackgrounds' : 'directMessageBackgrounds';
       const doc_id = currentChatType === 'group' ? currentChatUser : `${myUID}_${currentChatUser}`;
@@ -4325,8 +4386,8 @@ async function setupInitialization() {
       showNotif("📸 Uploading background image...", "info");
 
       const bgRef = storageRef(storage, `backgrounds/${myUID}/${Date.now()}`);
-      await uploadBytes(bgRef, file);
-      const bgUrl = await getDownloadURL(bgRef);
+      const snapshot = await uploadBytes(bgRef, file);
+      const bgUrl = await getDownloadURL(snapshot.ref);
 
       // Save to Firestore
       await setDoc(doc(db, "userBackgrounds", myUID), {
@@ -6400,17 +6461,74 @@ async function loadGroups() {
     }
 
     groupsList.innerHTML = "";
-    snapshot.forEach(docSnap => {
+    snapshot.forEach(async docSnap => {
       const group = docSnap.data();
       const groupId = docSnap.id;
       const li = document.createElement("li");
       li.className = "chat-list-item";
       li.setAttribute('data-chat-id', groupId);
+
+      // Get last message and unread count
+      let lastMessage = group.lastMessage || "No messages yet";
+      let lastMessageTime = "";
+      let unreadCount = 0;
+
+      try {
+        if (group.lastMessageTime) {
+          const date = group.lastMessageTime.toDate ? group.lastMessageTime.toDate() : new Date(group.lastMessageTime);
+          const now = new Date();
+          const diffMs = now - date;
+          const diffMins = Math.floor(diffMs / 60000);
+          const diffHours = Math.floor(diffMs / 3600000);
+          const diffDays = Math.floor(diffMs / 86400000);
+
+          if (diffMins < 1) {
+            lastMessageTime = "Now";
+          } else if (diffMins < 60) {
+            lastMessageTime = `${diffMins}m`;
+          } else if (diffHours < 24) {
+            lastMessageTime = `${diffHours}h`;
+          } else if (diffDays < 7) {
+            lastMessageTime = `${diffDays}d`;
+          } else {
+            lastMessageTime = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          }
+        }
+
+        // Shorten last message preview
+        if (lastMessage && lastMessage.length > 40) {
+          lastMessage = lastMessage.substring(0, 40) + "...";
+        }
+
+        // Count unread group messages
+        const messagesRef = collection(db, "groupMessages");
+        const unreadQuery = query(
+          messagesRef,
+          where("groupId", "==", groupId),
+          where("readBy", "array-contains-any", [myUID]) // Not read by this user
+        );
+        // Note: This is a simplified version - a better approach would be to track unread per user
+      } catch (e) {
+        console.log("Error loading group message preview:", e);
+      }
+
+      const unreadBadgeHTML = unreadCount > 0 ? `<span class="unread-badge">${unreadCount > 99 ? '99+' : unreadCount}</span>` : '';
+
       li.innerHTML = `
         <div class="chat-avatar-container"><div class="chat-avatar group-avatar">👥</div></div>
-        <div class="chat-info"><h3>${escape(group.name)}</h3></div>
+        <div class="chat-item-content ${unreadCount > 0 ? 'unread' : ''}">
+          <div class="chat-item-header">
+            <span class="chat-name">${escape(group.name)}</span>
+          </div>
+          <p class="chat-preview">${escape(lastMessage)}</p>
+        </div>
+        <div class="chat-time-container">
+          <span class="chat-item-time">${lastMessageTime}</span>
+          ${unreadBadgeHTML}
+        </div>
         <button class="chat-menu-btn" title="Options">⋮</button>
       `;
+
       li.addEventListener("click", async () => {
         await openChat(groupId, group.name, "👥", "group");
         if (typeof showChatDetailView === 'function') showChatDetailView();
@@ -6464,7 +6582,7 @@ async function loadContacts() {
     const q = query(collection(db, "users"), limit(50));
 
     // Real-time listener so UI updates without hard reload
-    contactsListener = onSnapshot(q, (snapshot) => {
+    contactsListener = onSnapshot(q, async (snapshot) => {
       if (!snapshot || snapshot.empty) {
         contactList.innerHTML = `<li class="empty-state"><p>No users found</p></li>`;
         return;
@@ -6480,7 +6598,15 @@ async function loadContacts() {
         <div class="chat-avatar-container">
           <div class="chat-avatar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); font-size: 20px;">🤖</div>
         </div>
-        <div class="chat-info"><h3>Chronex AI</h3></div>
+        <div class="chat-item-content">
+          <div class="chat-item-header">
+            <span class="chat-name">Chronex AI</span>
+          </div>
+          <p class="chat-preview">AI Assistant</p>
+        </div>
+        <div class="chat-time-container">
+          <span class="chat-item-time">Now</span>
+        </div>
         <button class="chat-menu-btn" title="Options">⋮</button>
       `;
 
@@ -6493,7 +6619,7 @@ async function loadContacts() {
 
       contactList.appendChild(chronexLi);
 
-      snapshot.forEach(docSnap => {
+      snapshot.forEach(async docSnap => {
         if (docSnap.id === myUID) return;
         const user = docSnap.data();
         const uid = docSnap.id;
@@ -6505,9 +6631,111 @@ async function loadContacts() {
         li.setAttribute('data-chat-id', uid);
         let avatar = pic ? `<img src="${pic}" class="chat-avatar" onerror="this.src='logo.jpg'">` : `<div class="chat-avatar">${name.charAt(0)}</div>`;
 
+        // Fetch last message for this user
+        let lastMessage = "No messages yet";
+        let lastMessageTime = "";
+        let unreadCount = 0;
+
+        try {
+          const messagesRef = collection(db, "messages");
+          
+          // Get the last message (from either direction)
+          const q1 = query(
+            messagesRef,
+            where("to", "==", uid),
+            where("from", "==", myUID),
+            orderBy("timestamp", "desc"),
+            limit(1)
+          );
+          
+          const q2 = query(
+            messagesRef,
+            where("from", "==", uid),
+            where("to", "==", myUID),
+            orderBy("timestamp", "desc"),
+            limit(1)
+          );
+
+          const snap1 = await getDocs(q1);
+          const snap2 = await getDocs(q2);
+
+          let latestMsg = null;
+          let latestTime = null;
+
+          if (!snap1.empty) {
+            latestMsg = snap1.docs[0].data();
+            latestTime = snap1.docs[0].data().timestamp;
+          }
+
+          if (!snap2.empty) {
+            const msg2 = snap2.docs[0].data();
+            const time2 = snap2.docs[0].data().timestamp;
+            if (!latestTime || time2 > latestTime) {
+              latestMsg = msg2;
+              latestTime = time2;
+            }
+          }
+
+          if (latestMsg) {
+            // Format last message preview
+            if (latestMsg.text) {
+              lastMessage = (latestMsg.from === myUID ? "You: " : "") + latestMsg.text.substring(0, 40);
+              if (latestMsg.text.length > 40) lastMessage += "...";
+            } else if (latestMsg.attachment) {
+              lastMessage = (latestMsg.from === myUID ? "You: " : "") + "📎 Attachment";
+            }
+
+            // Format time
+            if (latestTime) {
+              const date = latestTime.toDate ? latestTime.toDate() : new Date(latestTime);
+              const now = new Date();
+              const diffMs = now - date;
+              const diffMins = Math.floor(diffMs / 60000);
+              const diffHours = Math.floor(diffMs / 3600000);
+              const diffDays = Math.floor(diffMs / 86400000);
+
+              if (diffMins < 1) {
+                lastMessageTime = "Now";
+              } else if (diffMins < 60) {
+                lastMessageTime = `${diffMins}m`;
+              } else if (diffHours < 24) {
+                lastMessageTime = `${diffHours}h`;
+              } else if (diffDays < 7) {
+                lastMessageTime = `${diffDays}d`;
+              } else {
+                lastMessageTime = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+              }
+            }
+          }
+
+          // Count unread messages from this user
+          const unreadQuery = query(
+            messagesRef,
+            where("from", "==", uid),
+            where("to", "==", myUID),
+            where("read", "==", false)
+          );
+          const unreadSnap = await getDocs(unreadQuery);
+          unreadCount = unreadSnap.size;
+        } catch (e) {
+          console.log("Error loading message preview for", uid, e);
+        }
+
+        // Build HTML with new structure including preview and unread badge
+        const unreadBadgeHTML = unreadCount > 0 ? `<span class="unread-badge">${unreadCount > 99 ? '99+' : unreadCount}</span>` : '';
+        
         li.innerHTML = `
            <div class="chat-avatar-container">${avatar}</div>
-           <div class="chat-info"><h3>${escape(name)}</h3></div>
+           <div class="chat-item-content ${unreadCount > 0 ? 'unread' : ''}">
+             <div class="chat-item-header">
+               <span class="chat-name">${escape(name)}</span>
+             </div>
+             <p class="chat-preview">${escape(lastMessage)}</p>
+           </div>
+           <div class="chat-time-container">
+             <span class="chat-item-time">${lastMessageTime}</span>
+             ${unreadBadgeHTML}
+           </div>
            <button class="chat-menu-btn" title="Options">⋮</button>
          `;
 

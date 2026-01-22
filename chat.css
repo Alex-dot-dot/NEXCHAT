@@ -287,10 +287,10 @@ html, body {
    ============================================================ */
 
 .nex-status-container {
-  background: linear-gradient(135deg, rgba(0, 255, 102, 0.15), rgba(0, 204, 82, 0.1));
-  border-bottom: 2px solid #00ff66;
-  padding: 12px 16px;
-  max-height: 220px;
+  background: linear-gradient(180deg, rgba(0, 255, 102, 0.08) 0%, rgba(0, 255, 102, 0.04) 100%);
+  border-bottom: 1px solid rgba(0, 255, 102, 0.3);
+  padding: 16px;
+  max-height: 240px;
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
@@ -306,7 +306,10 @@ html, body {
 .nex-status-header {
   display: flex;
   align-items: center;
-  margin-bottom: 10px;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(0, 255, 102, 0.2);
 }
 
 .nex-status-header h3 {
@@ -533,15 +536,23 @@ html, body {
 }
 
 .status-item {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(0, 255, 102, 0.3);
-  border-radius: 12px;
-  padding: 12px;
+  background: rgba(0, 255, 102, 0.06);
+  border: 1px solid rgba(0, 255, 102, 0.25);
+  border-radius: 14px;
+  padding: 14px;
   -webkit-user-select: text;
   user-select: text;
-  min-width: 280px;
+  min-width: 300px;
   flex-shrink: 0;
   height: fit-content;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 255, 102, 0.05);
+}
+
+.status-item:hover {
+  background: rgba(0, 255, 102, 0.1);
+  border-color: rgba(0, 255, 102, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 255, 102, 0.1);
 }
 
 .status-item-header {
@@ -559,23 +570,25 @@ html, body {
 }
 
 .status-item-avatar {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: linear-gradient(135deg, #00ff66, #00cc52);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 18px;
   flex-shrink: 0;
   overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 255, 102, 0.3);
 }
 
 .status-item-name {
   color: #00ff66;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 14px;
   margin: 0;
+  text-shadow: 0 0 4px rgba(0, 255, 102, 0.2);
 }
 
 .status-item-time {
@@ -615,31 +628,33 @@ html, body {
 }
 
 .status-item-text {
-  color: #fff;
+  color: #e0e0e0;
   font-size: 14px;
-  line-height: 1.4;
-  margin: 0;
+  line-height: 1.5;
+  margin: 8px 0 0 0;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  font-weight: 400;
 }
 
 .status-item-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 10px;
+  margin-top: 12px;
   padding-top: 10px;
-  border-top: 1px solid rgba(0, 255, 102, 0.2);
+  border-top: 1px solid rgba(0, 255, 102, 0.15);
   font-size: 12px;
 }
 
 .status-expiry-timer {
   color: #00ff66;
   font-weight: 600;
-  font-size: 11px;
-  padding: 4px 8px;
-  background: rgba(0, 255, 102, 0.1);
-  border-radius: 4px;
+  font-size: 12px;
+  padding: 5px 10px;
+  background: rgba(0, 255, 102, 0.12);
+  border-radius: 6px;
+  border: 1px solid rgba(0, 255, 102, 0.2);
 }
 
 .status-empty-state {
@@ -1097,12 +1112,19 @@ html, body {
 }
 
 .unread-badge {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 8px;
   background: #00ff66;
-  border-radius: 50%;
+  color: #000;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
   flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 255, 102, 0.4);
 }
 
 .empty-state {
@@ -3164,6 +3186,12 @@ html, body {
   box-shadow: 0 0 20px rgba(0, 255, 102, 0.3);
 }
 
+.settings-action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .settings-action-btn.danger {
   background: linear-gradient(135deg, #cc0000, #990000);
   border-color: #ff4d4d;
@@ -3808,25 +3836,28 @@ body.light-mode .chat-list {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #1a1a1a;
+  background: rgba(0, 255, 102, 0.08);
   padding: 12px;
-  border-radius: 12px;
-  border: 2px solid rgba(0, 255, 102, 0.3);
+  border-radius: 14px;
+  border: 1px solid rgba(0, 255, 102, 0.3);
   transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 255, 102, 0.05);
 }
 
 .my-status-card:hover {
   border-color: #00ff66;
-  box-shadow: 0 0 10px rgba(0, 255, 102, 0.2);
+  background: rgba(0, 255, 102, 0.12);
+  box-shadow: 0 4px 12px rgba(0, 255, 102, 0.15);
 }
 
 .status-avatar {
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: #333;
+  background: linear-gradient(135deg, #00ff66, #00cc52);
   object-fit: cover;
   border: 2px solid #00ff66;
+  box-shadow: 0 2px 8px rgba(0, 255, 102, 0.3);
 }
 
 .upload-status-btn {
@@ -3843,11 +3874,12 @@ body.light-mode .chat-list {
   justify-content: center;
   transition: all 0.3s ease;
   flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 255, 102, 0.3);
 }
 
 .upload-status-btn:hover {
-  transform: scale(1.1);
-  box-shadow: 0 0 15px rgba(0, 255, 102, 0.5);
+  transform: scale(1.12);
+  box-shadow: 0 4px 12px rgba(0, 255, 102, 0.5);
 }
 
 .upload-status-btn:active {
