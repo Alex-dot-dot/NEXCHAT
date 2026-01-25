@@ -3573,6 +3573,11 @@ function loadSettingsPreferences() {
     const chatSizeEl = document.getElementById("chatSize" + chatSize.charAt(0).toUpperCase() + chatSize.slice(1).replace("-", ""));
     if (chatSizeEl) chatSizeEl.checked = true;
 
+    // Load element width preference
+    const elementWidth = prefs.elementWidth || "medium";
+    const elementWidthEl = document.getElementById("elementWidth" + elementWidth.charAt(0).toUpperCase() + elementWidth.slice(1));
+    if (elementWidthEl) elementWidthEl.checked = true;
+
     console.log("✅ Settings loaded successfully", prefs);
   } catch (err) {
     console.error("Error loading settings:", err);
@@ -3594,6 +3599,7 @@ function saveSettingsPreferences() {
       readReceipts: readEl?.checked ?? true,
       theme: document.querySelector('input[name="theme"]:checked')?.value || "dark",
       chatSize: document.querySelector('input[name="chatSize"]:checked')?.value || "medium",
+      elementWidth: document.querySelector('input[name="elementWidth"]:checked')?.value || "medium",
       lastUpdated: new Date().toISOString()
     };
 
@@ -3632,6 +3638,12 @@ function applySettings(prefs) {
     document.documentElement.setAttribute("data-chat-size", chatSize);
     document.body.classList.remove("chat-size-small", "chat-size-medium", "chat-size-large", "chat-size-extra-large");
     document.body.classList.add(`chat-size-${chatSize}`);
+
+    // Apply element width
+    const elementWidth = prefs.elementWidth || "medium";
+    document.documentElement.setAttribute("data-element-width", elementWidth);
+    document.body.classList.remove("element-width-compact", "element-width-small", "element-width-medium", "element-width-large", "element-width-full");
+    document.body.classList.add(`element-width-${elementWidth}`);
 
     // Vibration test on Android if enabled
     if (isAndroid && navigator.vibrate && prefs.sound) {
@@ -4294,6 +4306,11 @@ async function setupInitialization() {
 
     // Chat size radio buttons
     document.querySelectorAll('input[name="chatSize"]').forEach(radio => {
+      radio.addEventListener("change", saveSettingsPreferences, false);
+    });
+
+    // Element width radio buttons
+    document.querySelectorAll('input[name="elementWidth"]').forEach(radio => {
       radio.addEventListener("change", saveSettingsPreferences, false);
     });
   };
