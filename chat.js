@@ -3555,6 +3555,11 @@ function loadSettingsPreferences() {
     const themeEl = document.getElementById("theme" + theme.charAt(0).toUpperCase() + theme.slice(1));
     if (themeEl) themeEl.checked = true;
 
+    // Load chat size preference
+    const chatSize = prefs.chatSize || "medium";
+    const chatSizeEl = document.getElementById("chatSize" + chatSize.charAt(0).toUpperCase() + chatSize.slice(1).replace("-", ""));
+    if (chatSizeEl) chatSizeEl.checked = true;
+
     console.log("✅ Settings loaded successfully", prefs);
   } catch (err) {
     console.error("Error loading settings:", err);
@@ -3575,6 +3580,7 @@ function saveSettingsPreferences() {
       onlineStatus: onlineEl?.checked ?? true,
       readReceipts: readEl?.checked ?? true,
       theme: document.querySelector('input[name="theme"]:checked')?.value || "dark",
+      chatSize: document.querySelector('input[name="chatSize"]:checked')?.value || "medium",
       lastUpdated: new Date().toISOString()
     };
 
@@ -3607,6 +3613,12 @@ function applySettings(prefs) {
       document.body.classList.add("dark-theme");
       document.body.classList.remove("light-theme");
     }
+
+    // Apply chat size
+    const chatSize = prefs.chatSize || "medium";
+    document.documentElement.setAttribute("data-chat-size", chatSize);
+    document.body.classList.remove("chat-size-small", "chat-size-medium", "chat-size-large", "chat-size-extra-large");
+    document.body.classList.add(`chat-size-${chatSize}`);
 
     // Vibration test on Android if enabled
     if (isAndroid && navigator.vibrate && prefs.sound) {
@@ -4264,6 +4276,11 @@ async function setupInitialization() {
 
     // Theme radio buttons
     document.querySelectorAll('input[name="theme"]').forEach(radio => {
+      radio.addEventListener("change", saveSettingsPreferences, false);
+    });
+
+    // Chat size radio buttons
+    document.querySelectorAll('input[name="chatSize"]').forEach(radio => {
       radio.addEventListener("change", saveSettingsPreferences, false);
     });
   };
@@ -6117,6 +6134,14 @@ function initializeBasicUI() {
     return;
   }
   basicUIInitialized = true;
+
+  // Load and apply saved settings (chat size, theme, etc.)
+  try {
+    const savedSettings = JSON.parse(localStorage.getItem("nexchat_settings")) || {};
+    applySettings(savedSettings);
+  } catch (err) {
+    console.log("No saved settings found, using defaults");
+  }
 
   // Initialize emoji picker
   initializeEmojiPicker();
