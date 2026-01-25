@@ -1665,6 +1665,9 @@ html, body {
   border-top: 1px solid #333;
   max-height: none;
   flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  width: 100%;
 }
 
 /* ============================================================
@@ -1771,10 +1774,13 @@ html, body {
   align-items: flex-end;
   flex-wrap: nowrap;
   width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
   padding: 16px;
   padding-bottom: max(16px, var(--safe-area-bottom));
   padding-left: max(16px, var(--safe-area-left));
   padding-right: max(16px, var(--safe-area-right));
+  justify-self: center;
 }
 
 .sticker-btn {

@@ -252,8 +252,21 @@ class ChronexAI {
     return def_random(greetings);
   }
 
-  // General response with varied replies
+  // General response with varied replies - NOW CONTEXT-AWARE
   generateGeneralResponse(message) {
+    const msgLower = message.toLowerCase();
+    
+    // Extract key topics from message
+    const topics = this.extractTopics(message);
+    
+    // Build context-aware response
+    let contextResponse = this.buildContextResponse(message, topics, msgLower);
+    
+    if (contextResponse) {
+      return contextResponse;
+    }
+
+    // Fallback to general responses
     const responses = [
       `💬 **Response**\n\nThanks for your message! I'm Chronex AI, and I can help with:\n• Code analysis and suggestions\n• Mathematical problems\n• Answering questions\n• Writing assistance\n• Data analysis\n\nWhat would you like to explore?`,
       
@@ -271,6 +284,124 @@ class ChronexAI {
     ];
 
     return def_random(responses);
+  }
+
+  // Extract topics from message
+  extractTopics(message) {
+    const msgLower = message.toLowerCase();
+    const topics = [];
+    
+    // Programming topics
+    if (msgLower.includes('javascript') || msgLower.includes('js') || msgLower.includes('node')) topics.push('javascript');
+    if (msgLower.includes('python') || msgLower.includes('py')) topics.push('python');
+    if (msgLower.includes('react') || msgLower.includes('vue') || msgLower.includes('angular')) topics.push('frontend');
+    if (msgLower.includes('database') || msgLower.includes('sql') || msgLower.includes('mongodb')) topics.push('database');
+    if (msgLower.includes('api') || msgLower.includes('rest') || msgLower.includes('http')) topics.push('api');
+    
+    // General topics
+    if (msgLower.includes('help') || msgLower.includes('assist')) topics.push('help');
+    if (msgLower.includes('error') || msgLower.includes('bug') || msgLower.includes('fix')) topics.push('debugging');
+    if (msgLower.includes('explain') || msgLower.includes('understand') || msgLower.includes('learn')) topics.push('explanation');
+    if (msgLower.includes('how') || msgLower.includes('what') || msgLower.includes('why')) topics.push('question');
+    if (msgLower.includes('create') || msgLower.includes('build') || msgLower.includes('write')) topics.push('creation');
+    if (msgLower.includes('optimize') || msgLower.includes('improve') || msgLower.includes('faster')) topics.push('optimization');
+    if (msgLower.includes('test') || msgLower.includes('debug')) topics.push('testing');
+    
+    return topics;
+  }
+
+  // Build context-aware response based on extracted topics
+  buildContextResponse(message, topics, msgLower) {
+    // If no specific topics, return null to use general response
+    if (topics.length === 0) return null;
+    
+    let response = '';
+    
+    // Debugging help
+    if (topics.includes('debugging')) {
+      const debugResponses = [
+        `🐛 **Debugging Assistance**\n\nLet's fix that issue!\n\n**Steps I'll help with:**\n• Identify the error cause\n• Trace the problem\n• Provide solutions\n• Test the fix\n• Optimize the code\n\nShare your error details and I'll help debug!`,
+        `🔧 **Bug Fix Support**\n\nI'm ready to help squash that bug!\n\n**My approach:**\n• Analyze error messages\n• Examine stack traces\n• Identify root cause\n• Suggest fixes\n• Prevent future issues`,
+        `⚙️ **Error Resolution**\n\nLet's resolve this together!\n\n**Process:**\n1. Understand the error\n2. Locate the problem area\n3. Develop solution\n4. Verify the fix\n5. Document findings`
+      ];
+      return def_random(debugResponses);
+    }
+    
+    // Learning/Explanation
+    if (topics.includes('explanation')) {
+      const explainResponses = [
+        `📚 **Detailed Explanation**\n\nI'd be happy to break this down for you!\n\n**I'll cover:**\n• Core concepts\n• Real-world examples\n• Best practices\n• Common pitfalls\n• Practical applications`,
+        `🎓 **Learning Support**\n\nLet's make this clear and understandable!\n\n**I'll provide:**\n• Simple explanations\n• Visual examples\n• Step-by-step guides\n• Comparison with similar concepts\n• Practice tips`,
+        `💡 **Concept Breakdown**\n\nReady to explain this thoroughly!\n\n**Coverage:**\n• Fundamental concepts\n• Detailed examples\n• Use cases\n• Related topics\n• Resources for deeper learning`
+      ];
+      return def_random(explainResponses);
+    }
+    
+    // Code creation/writing
+    if (topics.includes('creation')) {
+      const createResponses = [
+        `✍️ **Code Generation**\n\nI can help you build that!\n\n**I provide:**\n• Complete code examples\n• Best practices\n• Comments & documentation\n• Error handling\n• Testing strategies`,
+        `🏗️ **Building Solutions**\n\nLet's create something awesome!\n\n**I'll help with:**\n• Code structure\n• Implementation details\n• Performance tips\n• Security considerations\n• Clean code practices`,
+        `💻 **Development Assistance**\n\nReady to code together!\n\n**Features I'll include:**\n• Well-structured code\n• Error handling\n• Comments\n• Best practices\n• Testing examples`
+      ];
+      return def_random(createResponses);
+    }
+    
+    // Optimization
+    if (topics.includes('optimization')) {
+      const optimizeResponses = [
+        `⚡ **Performance Optimization**\n\nLet's make it faster!\n\n**Optimization areas:**\n• Algorithm efficiency\n• Memory usage\n• Database queries\n• Caching strategies\n• Code profiling`,
+        `🚀 **Speed Improvement**\n\nI'll help optimize your code!\n\n**Focus areas:**\n• Bottleneck identification\n• Algorithm refinement\n• Resource management\n• Caching techniques\n• Load optimization`,
+        `📈 **Performance Tuning**\n\nReady to boost performance!\n\n**Strategies:**\n• Code profiling\n• Complexity reduction\n• Memory efficiency\n• I/O optimization\n• Parallel processing`
+      ];
+      return def_random(optimizeResponses);
+    }
+    
+    // Programming language specific
+    if (topics.includes('javascript')) {
+      const jsResponses = [
+        `📍 **JavaScript Help**\n\nJavaScript expert here!\n\n**I can assist with:**\n• ES6+ syntax\n• Async/await\n• DOM manipulation\n• Event handling\n• Performance optimization`,
+        `⚙️ **JS Development**\n\nLet's work with JavaScript!\n\n**Coverage:**\n• Core concepts\n• Advanced features\n• Debugging tips\n• Best practices\n• Modern frameworks`
+      ];
+      return def_random(jsResponses);
+    }
+    
+    if (topics.includes('python')) {
+      const pyResponses = [
+        `🐍 **Python Assistance**\n\nPython specialist at your service!\n\n**I help with:**\n• Syntax & semantics\n• Data structures\n• Libraries & frameworks\n• File handling\n• OOP concepts`,
+        `🔍 **Python Development**\n\nReady for Python projects!\n\n**My expertise:**\n• Python fundamentals\n• Advanced features\n• Data processing\n• Web frameworks\n• Best practices`
+      ];
+      return def_random(pyResponses);
+    }
+    
+    // Database help
+    if (topics.includes('database')) {
+      const dbResponses = [
+        `🗄️ **Database Support**\n\nDatabase expert ready to help!\n\n**I assist with:**\n• SQL queries\n• Schema design\n• Indexing strategies\n• Query optimization\n• NoSQL databases`,
+        `📊 **Data Management**\n\nLet's manage your data efficiently!\n\n**Coverage:**\n• Database design\n• Query optimization\n• Data integrity\n• Backup strategies\n• Performance tuning`
+      ];
+      return def_random(dbResponses);
+    }
+    
+    // API/Backend
+    if (topics.includes('api')) {
+      const apiResponses = [
+        `🔌 **API Development**\n\nAPI specialist here!\n\n**I help with:**\n• RESTful design\n• Endpoints\n• Authentication\n• Error handling\n• Documentation`,
+        `🌐 **Backend Services**\n\nReady to build APIs!\n\n**My expertise:**\n• API architecture\n• Security\n• Performance\n• Error handling\n• Testing`
+      ];
+      return def_random(apiResponses);
+    }
+    
+    // Testing
+    if (topics.includes('testing')) {
+      const testResponses = [
+        `🧪 **Testing & QA**\n\nTesting expert ready!\n\n**I provide:**\n• Unit testing\n• Integration tests\n• Test strategies\n• Coverage analysis\n• CI/CD integration`,
+        `✅ **Quality Assurance**\n\nLet's ensure quality!\n\n**Coverage:**\n• Test planning\n• Test execution\n• Bug reporting\n• Automation\n• Best practices`
+      ];
+      return def_random(testResponses);
+    }
+    
+    return null;
   }
 
   // Code analysis with varied responses

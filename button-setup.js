@@ -1,8 +1,3 @@
-// Button Event Listeners Setup
-// This script runs AFTER chat.js module is fully loaded
-// It attaches listeners to ALL interactive buttons in the app
-
-// Create fallback functions to prevent "undefined" errors before chat.js loads
 if (typeof window.goBackToDashboard !== 'function') {
   window.goBackToDashboard = () => console.warn('goBackToDashboard not yet loaded from chat.js');
 }
@@ -22,7 +17,6 @@ if (typeof window.goBack !== 'function') {
   window.goBack = () => console.warn('goBack not yet loaded from chat.js');
 }
 
-// Helper function to wait for functions to be available
 function waitForFunctions() {
   return new Promise((resolve) => {
     const checkInterval = setInterval(() => {
@@ -36,7 +30,6 @@ function waitForFunctions() {
         resolve();
       }
     }, 100);
-    // Timeout after 5 seconds to prevent infinite waiting
     setTimeout(() => {
       clearInterval(checkInterval);
       console.warn('⚠️ Button functions not fully loaded after 5 seconds, proceeding anyway');
@@ -45,7 +38,7 @@ function waitForFunctions() {
   });
 }
 
-console.log("🔗 Setting up ALL button event listeners...");
+console.log("🔗 Setting up button event listeners...");
 
 function attachAllButtonListeners() {
   console.log("✅ Attaching button listeners");

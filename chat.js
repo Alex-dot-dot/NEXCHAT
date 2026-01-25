@@ -32,8 +32,6 @@ function hapticFeedback(intensity = 'medium') {
   }
 }
 
-// Note: Auth state is handled in setupInitialization() function instead
-
 let currentChatUser = null;
 let currentChatType = 'direct'; // 'direct' or 'group'
 let myUID = null;
@@ -45,16 +43,14 @@ let callActive = false;
 let callStartTime = null;
 let callTimer = null;
 let mentionPopupOpen = false;
-let groupMembers = []; // Store current group members for mentions
+let groupMembers = [];
 
-// Notification sounds - use data URLs for better compatibility
 const notificationSounds = {
   success: 'data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQIAAAAAAA==',
   error: 'data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQIAAAAAAA==',
   info: 'data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQIAAAAAAA=='
 };
 
-// ============ GLOBAL STATE ============
 let basicUIInitialized = false;
 let authListenersInitialized = false;
 let offlineDB = null;
@@ -68,16 +64,12 @@ const emojis = [
   '👋', '👏', '🙌', '👐', '🤝', '🤲', '🤞', '🖖', '🤘', '🤟'
 ];
 
-// ============ GLOBAL UTILITY FUNCTIONS ============
-
-// Fullscreen toggle function
 function toggleFullscreen() {
   const elem = document.documentElement;
   const app = document.querySelector('.app');
   const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
 
   if (!isFullscreen) {
-    // Try native fullscreen first
     let fullscreenPromise = null;
 
     if (elem.requestFullscreen) {
@@ -3040,6 +3032,27 @@ document.getElementById("infoCallBtn")?.addEventListener("click", () => {
 
 document.getElementById("infoVideoBtn")?.addEventListener("click", () => {
   startCall(true);
+});
+
+document.getElementById("infoAddBtn")?.addEventListener("click", () => {
+  if (currentChatType === 'group') {
+    // Open group members modal to add new members
+    const modal = document.getElementById("addMembersModal");
+    if (modal) {
+      modal.style.display = "block";
+      showNotif("👥 Add group members", "info");
+    } else {
+      showNotif("👥 Create a popup to add members", "info");
+    }
+  } else {
+    showNotif("👥 Add members to convert to group chat", "info");
+  }
+});
+
+document.getElementById("infoSearchBtn")?.addEventListener("click", () => {
+  // Open search within this chat
+  openSearch();
+  showNotif("🔍 Search within this chat", "info");
 });
 
 document.getElementById("infoBtn")?.addEventListener("click", () => {
