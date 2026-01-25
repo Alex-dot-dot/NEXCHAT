@@ -252,10 +252,14 @@ async function showGroupInfoPanel(groupId) {
     const members = groupData.members || [];
     const infoPic = groupData.groupPic || '👥';
 
-    // Update header
-    document.getElementById('infoName').textContent = groupData.name || 'Group';
-    document.getElementById('infoPic').src = infoPic || '👥';
-    document.getElementById('infoMemberCount').textContent = `Group · ${members.length} members`;
+    // Update header with null checks
+    const infoNameEl = document.getElementById('infoName');
+    const infoPicEl = document.getElementById('infoPic');
+    const infoMemberCountEl = document.getElementById('infoMemberCount');
+    
+    if (infoNameEl) infoNameEl.textContent = groupData.name || 'Group';
+    if (infoPicEl) infoPicEl.src = infoPic || '👥';
+    if (infoMemberCountEl) infoMemberCountEl.textContent = `Group · ${members.length} members`;
 
     // Load and display media
     try {
@@ -281,7 +285,7 @@ async function showGroupInfoPanel(groupId) {
 
       document.getElementById('mediaCount').textContent = mediaCount;
       const mediaPreview = document.getElementById('mediaPreview');
-      mediaPreview.innerHTML = '';
+      if (mediaPreview) mediaPreview.innerHTML = '';
 
       mediaItems.forEach(attachment => {
         if (attachment.downloadURL) {
@@ -294,17 +298,19 @@ async function showGroupInfoPanel(groupId) {
           } else {
             item.innerHTML = `<div style="display: flex; align-items: center; justify-content: center; height: 100%; background: #1a1a1a; color: #00ff66;">📄</div>`;
           }
-          mediaPreview.appendChild(item);
+          const mediaPreview = document.getElementById('mediaPreview');
+          if (mediaPreview) mediaPreview.appendChild(item);
         }
       });
     } catch (err) {
       console.log('Media loading skipped:', err.message);
-      document.getElementById('mediaCount').textContent = '0';
+      const mediaCountEl = document.getElementById('mediaCount');
+      if (mediaCountEl) mediaCountEl.textContent = '0';
     }
 
     // Load members list
     const membersContent = document.getElementById('membersListContent');
-    membersContent.innerHTML = '';
+    if (membersContent) membersContent.innerHTML = '';
     const adminMembers = groupData.admins || [groupData.createdBy];
 
     for (const memberId of members) {
@@ -323,12 +329,14 @@ async function showGroupInfoPanel(groupId) {
           <div class="member-role">${isAdmin ? '👑 Admin' : 'Member'}</div>
         </div>
       `;
-      membersContent.appendChild(memberDiv);
+      if (membersContent) membersContent.appendChild(memberDiv);
     }
 
     // Show the panel
-    document.getElementById('infoSidebar').style.display = 'block';
-    document.getElementById('membersList').style.display = 'block';
+    const infoSidebarEl = document.getElementById('infoSidebar');
+    const membersListEl = document.getElementById('membersList');
+    if (infoSidebarEl) infoSidebarEl.style.display = 'block';
+    if (membersListEl) membersListEl.style.display = 'block';
 
   } catch (error) {
     console.error('Error showing group info panel:', error);
@@ -346,16 +354,22 @@ async function showUserInfoPanel(userId) {
 
     const userData = userDoc.data();
 
-    // Update header
-    document.getElementById('infoName').textContent = userData.username || userData.name || 'User';
-    document.getElementById('infoPic').src = userData.profilePic || userData.profilePicUrl || '👤';
-    document.getElementById('infoMemberCount').textContent = userData.email || 'User Profile';
+    // Update header with null checks
+    const infoNameEl = document.getElementById('infoName');
+    const infoPicEl = document.getElementById('infoPic');
+    const infoMemberCountEl = document.getElementById('infoMemberCount');
+    
+    if (infoNameEl) infoNameEl.textContent = userData.username || userData.name || 'User';
+    if (infoPicEl) infoPicEl.src = userData.profilePic || userData.profilePicUrl || '👤';
+    if (infoMemberCountEl) infoMemberCountEl.textContent = userData.email || 'User Profile';
 
-    // Hide members list for direct chats
-    document.getElementById('membersList').style.display = 'none';
+    // Hide members list for direct chats with null check
+    const membersListEl = document.getElementById('membersList');
+    if (membersListEl) membersListEl.style.display = 'none';
 
     // Show the panel
-    document.getElementById('infoSidebar').style.display = 'block';
+    const infoSidebarEl = document.getElementById('infoSidebar');
+    if (infoSidebarEl) infoSidebarEl.style.display = 'block';
 
   } catch (error) {
     console.error('Error showing user info panel:', error);
@@ -715,6 +729,8 @@ function showChatListView() {
   if (bottomNav) {
     bottomNav.style.display = "flex";
   }
+  // Hide chat profile display when returning to list view
+  hideChatProfileDisplay();
 }
 
 function showChatDetailView() {
@@ -2236,6 +2252,24 @@ function loadMessages() {
       return;
     }
 
+    // Mark incoming unread messages as read
+    allMessages.forEach(async (m) => {
+      if (m.from !== myUID && m.read === false && m.docId) {
+        try {
+          await updateDoc(doc(db, "messages", m.docId), { read: true });
+        } catch (e) {
+          console.error("Error marking message as read:", e);
+        }
+      }
+    });
+
+    // Reload contacts to update unread badges
+    setTimeout(() => {
+      if (typeof loadContacts === 'function') {
+        loadContacts();
+      }
+    }, 500);
+
     allMessages.forEach((m) => {
       const isOwn = m.from === myUID;
 
@@ -2400,9 +2434,58 @@ function loadMessages() {
 // OPEN CHAT & UPDATE UI
 // ============================================================
 
+// Update profile display in header and message input area
+function updateChatProfileDisplay(username, profilePic, status = 'Online') {
+  // Update header active chat info
+  const headerLogoContainer = document.getElementById("headerLogoContainer");
+  const activeChatHeader = document.getElementById("activeChatHeader");
+  
+  if (headerLogoContainer && activeChatHeader) {
+    headerLogoContainer.style.display = 'none';
+    activeChatHeader.style.display = 'flex';
+    
+    const activeChatName = document.getElementById("activeChatName");
+    const activeChatStatus = document.getElementById("activeChatStatus");
+    const activeChatAvatar = document.getElementById("activeChatAvatar");
+    
+    if (activeChatName) activeChatName.textContent = username;
+    if (activeChatStatus) activeChatStatus.textContent = status;
+    if (activeChatAvatar) activeChatAvatar.src = profilePic || "👤";
+  }
+  
+  // Update message input area profile display
+  const chatUserProfile = document.getElementById("chatUserProfile");
+  if (chatUserProfile) {
+    chatUserProfile.style.display = 'flex';
+    
+    const chatUserName = document.getElementById("chatUserName");
+    const chatUserStatus = document.getElementById("chatUserStatus");
+    const chatUserAvatar = document.getElementById("chatUserAvatar");
+    
+    if (chatUserName) chatUserName.textContent = username;
+    if (chatUserStatus) chatUserStatus.textContent = status;
+    if (chatUserAvatar) chatUserAvatar.src = profilePic || "👤";
+  }
+}
+
+// Hide profile display (when not in a chat)
+function hideChatProfileDisplay() {
+  const headerLogoContainer = document.getElementById("headerLogoContainer");
+  const activeChatHeader = document.getElementById("activeChatHeader");
+  const chatUserProfile = document.getElementById("chatUserProfile");
+  
+  if (headerLogoContainer) headerLogoContainer.style.display = 'block';
+  if (activeChatHeader) activeChatHeader.style.display = 'none';
+  if (chatUserProfile) chatUserProfile.style.display = 'none';
+}
+
 async function openChat(uid, username, profilePic, chatType = 'direct') {
   currentChatUser = uid;
   currentChatType = chatType; // Store chat type (direct or group)
+  
+  // Update the profile display immediately
+  updateChatProfileDisplay(username, profilePic, "Loading...");
+
 
   // Update chat header elements (with null checks)
   const chatNameEl = document.getElementById("chatName");
@@ -2432,6 +2515,9 @@ async function openChat(uid, username, profilePic, chatType = 'direct') {
         
         const infoStatusEl = document.getElementById("infoStatus");
         if (infoStatusEl) infoStatusEl.textContent = `👥 Group Chat`;
+        
+        // Update profile display with group status
+        updateChatProfileDisplay(username, profilePic, "👥 Group Chat");
 
         // Load group members for mention system
         groupMembers = [];
@@ -2460,6 +2546,9 @@ async function openChat(uid, username, profilePic, chatType = 'direct') {
       
       const infoStatusEl = document.getElementById("infoStatus");
       if (infoStatusEl) infoStatusEl.textContent = "🤖 AI Ready";
+      
+      // Update profile display with AI status
+      updateChatProfileDisplay(username, profilePic, "🤖 AI Ready");
 
       showNotif("💬 Welcome to Chronex AI! Ask me anything!", "info");
     } else {
@@ -2472,11 +2561,15 @@ async function openChat(uid, username, profilePic, chatType = 'direct') {
         const infoEmail = document.getElementById("infoEmail");
         if (infoEmail) infoEmail.textContent = userData.email || "";
         
+        const statusText = userData.online ? "🟢 Online" : "⚫ Offline";
         const statusTextEl = document.getElementById("statusText");
-        if (statusTextEl) statusTextEl.textContent = userData.online ? "🟢 Online" : "⚫ Offline";
+        if (statusTextEl) statusTextEl.textContent = statusText;
         
         const infoStatusEl = document.getElementById("infoStatus");
-        if (infoStatusEl) infoStatusEl.textContent = userData.online ? "🟢 Online" : "⚫ Offline";
+        if (infoStatusEl) infoStatusEl.textContent = statusText;
+        
+        // Update profile display with user status
+        updateChatProfileDisplay(username, profilePic, statusText);
       } else {
         // User document doesn't exist yet, but allow chatting with UID
         console.warn("User document not found in database, but proceeding with UID:", uid);
@@ -2488,6 +2581,9 @@ async function openChat(uid, username, profilePic, chatType = 'direct') {
         
         const infoStatusEl = document.getElementById("infoStatus");
         if (infoStatusEl) infoStatusEl.textContent = "⚪ Pending";
+        
+        // Update profile display with pending status
+        updateChatProfileDisplay(username, profilePic, "⚪ Pending");
         
         showNotif("ℹ️ User profile not fully synced yet. Chat enabled via UID.", "info");
       }
@@ -6572,57 +6668,62 @@ async function loadContacts() {
   const contactList = document.getElementById("contactList");
   if (!contactList || !myUID) return;
 
-  contactList.innerHTML = '<li style="text-align:center; padding:10px;">Loading contacts...</li>';
+  contactList.innerHTML = '<li style="text-align:center; padding:10px;">Loading chats...</li>';
   try {
     // Unsubscribe previous listener if exists
     if (typeof contactsListener === 'function') {
       try { contactsListener(); } catch (e) { /* ignore */ }
     }
 
-    const q = query(collection(db, "users"), limit(50));
+    contactList.innerHTML = "";
 
-    // Real-time listener so UI updates without hard reload
-    contactsListener = onSnapshot(q, async (snapshot) => {
-      if (!snapshot || snapshot.empty) {
-        contactList.innerHTML = `<li class="empty-state"><p>No users found</p></li>`;
-        return;
-      }
-
-      contactList.innerHTML = "";
-
-      // Add Chronex AI at the top
-      const chronexLi = document.createElement("li");
-      chronexLi.className = "chat-list-item chronex-ai-item";
-      chronexLi.setAttribute('data-chat-id', 'chronex-ai');
-      chronexLi.innerHTML = `
-        <div class="chat-avatar-container">
-          <div class="chat-avatar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); font-size: 20px;">🤖</div>
+    // Add Chronex AI at the top
+    const chronexLi = document.createElement("li");
+    chronexLi.className = "chat-list-item chronex-ai-item";
+    chronexLi.setAttribute('data-chat-id', 'chronex-ai');
+    chronexLi.innerHTML = `
+      <div class="chat-avatar-container">
+        <div class="chat-avatar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); font-size: 20px;">🤖</div>
+      </div>
+      <div class="chat-item-content">
+        <div class="chat-item-header">
+          <span class="chat-name">Chronex AI</span>
         </div>
-        <div class="chat-item-content">
-          <div class="chat-item-header">
-            <span class="chat-name">Chronex AI</span>
-          </div>
-          <p class="chat-preview">AI Assistant</p>
-        </div>
-        <div class="chat-time-container">
-          <span class="chat-item-time">Now</span>
-        </div>
-        <button class="chat-menu-btn" title="Options">⋮</button>
-      `;
+        <p class="chat-preview">AI Assistant</p>
+      </div>
+      <div class="chat-time-container">
+        <span class="chat-item-time">Now</span>
+      </div>
+      <button class="chat-menu-btn" title="Options">⋮</button>
+    `;
 
-      chronexLi.addEventListener("click", async (e) => {
-        e.stopPropagation();
-        if (myUID) chronexAI.setUserId(myUID);
-        await openChat("chronex-ai", "Chronex AI", null, "ai");
-        if (typeof showChatDetailView === 'function') showChatDetailView();
-      });
+    chronexLi.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      if (myUID) chronexAI.setUserId(myUID);
+      await openChat("chronex-ai", "Chronex AI", null, "ai");
+      if (typeof showChatDetailView === 'function') showChatDetailView();
+    });
 
-      contactList.appendChild(chronexLi);
+    contactList.appendChild(chronexLi);
 
-      snapshot.forEach(async docSnap => {
-        if (docSnap.id === myUID) return;
-        const user = docSnap.data();
-        const uid = docSnap.id;
+    // Get user's contact list
+    const myUserDoc = await getDoc(doc(db, "users", myUID));
+    const myContacts = myUserDoc.data()?.contacts || [];
+
+    if (myContacts.length === 0) {
+      contactList.innerHTML += `<li class="empty-state"><p>No chats yet. Start a conversation!</p></li>`;
+      return;
+    }
+
+    // Load only users in the contact list
+    for (const uid of myContacts) {
+      if (uid === myUID) continue;
+
+      try {
+        const userDoc = await getDoc(doc(db, "users", uid));
+        if (!userDoc.exists()) continue;
+
+        const user = userDoc.data();
         const name = user.username || user.name || "User";
         const pic = user.profilePic || null;
 
@@ -6721,23 +6822,23 @@ async function loadContacts() {
           console.log("Error loading message preview for", uid, e);
         }
 
-        // Build HTML with new structure including preview and unread badge
-        const unreadBadgeHTML = unreadCount > 0 ? `<span class="unread-badge">${unreadCount > 99 ? '99+' : unreadCount}</span>` : '';
+        // Build HTML with unread badge (green dot with count)
+        const unreadBadgeHTML = unreadCount > 0 ? `<div class="unread-badge" title="${unreadCount} unread">${unreadCount > 99 ? '99+' : unreadCount}</div>` : '';
         
         li.innerHTML = `
-           <div class="chat-avatar-container">${avatar}</div>
-           <div class="chat-item-content ${unreadCount > 0 ? 'unread' : ''}">
-             <div class="chat-item-header">
-               <span class="chat-name">${escape(name)}</span>
-             </div>
-             <p class="chat-preview">${escape(lastMessage)}</p>
-           </div>
-           <div class="chat-time-container">
-             <span class="chat-item-time">${lastMessageTime}</span>
-             ${unreadBadgeHTML}
-           </div>
-           <button class="chat-menu-btn" title="Options">⋮</button>
-         `;
+          <div class="chat-avatar-container">${avatar}</div>
+          <div class="chat-item-content ${unreadCount > 0 ? 'unread' : ''}">
+            <div class="chat-item-header">
+              <span class="chat-name">${escape(name)}</span>
+            </div>
+            <p class="chat-preview">${escape(lastMessage)}</p>
+          </div>
+          <div class="chat-time-container">
+            <span class="chat-item-time">${lastMessageTime}</span>
+            ${unreadBadgeHTML}
+          </div>
+          <button class="chat-menu-btn" title="Options">⋮</button>
+        `;
 
         li.addEventListener("click", async () => {
           await openChat(uid, name, pic, "direct");
@@ -6771,10 +6872,10 @@ async function loadContacts() {
         }
 
         contactList.appendChild(li);
-      });
-    }, (err) => {
-      console.error('Contacts listener error', err);
-    });
+      } catch (contactErr) {
+        console.error("Error loading contact", uid, contactErr);
+      }
+    }
   } catch (err) {
     console.error("Contacts error", err);
   }

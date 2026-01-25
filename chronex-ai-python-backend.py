@@ -458,33 +458,152 @@ class ChronexAIPython:
         logger.info(f"🤖 ChronexAI initialized - Using Real AI: {self.use_real_ai}")
 
     def get_ai_response(self, message, context=""):
-        """Get response from real AI if available, fallback to default"""
+        """Get response from real AI - PRIMARY METHOD"""
         if self.use_real_ai:
             real_response = self.ai_provider.generate_response(message, context)
             if real_response:
                 logger.info(f"✅ Real AI response generated")
                 return real_response
         
-        logger.info(f"⚡ Using default response (Real AI unavailable)")
+        # Only fallback to defaults if real AI fails
+        logger.info(f"⚡ Real AI unavailable, using context-aware fallback")
         return None
 
-    def detect_message_type(self, message):
-        """Detect the type of message"""
-        msg_lower = message.lower()
+    def process_message(self, message, conversation_history=None):
+        """Process incoming message with smart, context-aware responses"""
+        try:
+            # Add to history
+            if conversation_history is None:
+                conversation_history = []
+            
+            conversation_history.append({
+                "role": "user",
+                "content": message,
+                "timestamp": datetime.now().isoformat()
+            })
 
-        if any(x in msg_lower for x in ["status", "online", "running", "healthy", "check status"]):
-            return "status"
-        elif any(x in msg_lower for x in ["creator", "author", "made", "developed", "demon alex", "nexchat developer"]):
-            return "creator"
-        elif any(x in msg_lower for x in ["code", "function", "javascript", "python", "algorithm", "syntax", "debug", "bug"]):
-            return "code"
-        elif any(x in msg_lower for x in ["solve", "calculate", "=", "math", "equation","equals","answer", "formula", "integral", "derivative"]):
-            return "math"
-        elif any(x in msg_lower for x in ["image", "photo", "picture", "scan", "analyze image", "vision", "ocr", "text recognition"]):
-            return "image"
-        elif any(x in msg_lower for x in ["?", "what", "how", "why", "explain", "understand", "teach", "tell"]):
+            # Build conversation context for AI
+            recent_context = "\n".join([
+                f"{msg.get('role', 'user')}: {msg.get('content', '')}"
+                for msg in conversation_history[-5:]  # Last 5 messages for context
+            ])
+
+            # Try real AI first with full conversation context
+            context = f"Full conversation:\n{recent_context}"
+            real_response = self.get_ai_response(message, context)
+            
+            if real_response:
+                response = real_response
+            else:
+                # Smart fallback: Provide helpful general response
+                response = f"""💡 I'm Chronex AI, your intelligent assistant!
+
+I can help with:
+• Answering questions and explaining concepts
+• Code analysis and programming help
+• Mathematical problem solving
+• Data science and analytics
+• Web development assistance
+• General conversation and advice
+
+**Your message:** "{message[:50]}{'...' if len(message) > 50 else ''}"
+
+Please keep the conversation going! I'm here to help with any topic you'd like to discuss."""
+
+            # Add AI response to history
+            conversation_history.append({
+                "role": "assistant",
+                "content": response,
+                "timestamp": datetime.now().isoformat()
+            })
+
+            return {
+                "success": True,
+                "response": response,
+                "model": self.config["model"]["name"],
+                "history": conversation_history,
+                "ai_powered": real_response is not None
+            }
+
+        except Exception as e:
+            logger.error(f"Error processing message: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e),
+                "response": "⚠️ An error occurred while processing your message. Please try again."
+            }
+
+    def process_message_simplified(self, message, conversation_history=None):
+        """Simplified intelligent message processor - no rigid categories"""
+        try:
+            if conversation_history is None:
+                conversation_history = []
+            
+            # Add user message to history
+            conversation_history.append({
+                "role": "user",
+                "content": message,
+                "timestamp": datetime.now().isoformat()
+            })
+
+            # Build smart context from conversation history
+            context_messages = conversation_history[-5:]  # Last 5 messages
+            conversation_context = "\n".join([
+                f"{msg.get('role', 'user')}: {msg.get('content', '')}"
+                for msg in context_messages
+            ])
+
+            # Intelligent AI response with full context awareness
+            context = f"""You are Chronex AI, an intelligent and helpful assistant by DEMON ALEX.
+You have knowledge in programming, mathematics, data science, and general conversation.
+Be natural, friendly, and adapt to the user's needs.
+
+Recent conversation:
+{conversation_context}"""
+
+            response = self.get_ai_response(message, context)
+            
+            if not response:
+                # Fallback with helpful generic response
+                response = """💭 I'm here to help! Feel free to ask me about:
+- Programming and code help
+- Math and calculations
+- Data science questions  
+- General advice and conversation
+- And much more!
+
+What would you like to discuss?"""
+
+            # Add to history
+            conversation_history.append({
+                "role": "assistant",
+                "content": response,
+                "timestamp": datetime.now().isoformat()
+            })
+
+            return {
+                "success": True,
+                "response": response,
+                "model": self.config["model"]["name"],
+                "history": conversation_history
+            }
+
+        except Exception as e:
+            logger.error(f"Message processing error: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e),
+                "response": "Sorry, I encountered an issue. Please try again."
+            }
+
+    def detect_message_type(self, message):
+        """Detect message type for analytics (no longer used for routing)"""
+        msg_lower = message.lower()
+        if any(x in msg_lower for x in ["?", "what", "how", "why", "explain"]):
             return "question"
-        elif any(x in msg_lower for x in ["hello", "hi", "hey", "greetings","whats up","xup", "sup", "yo", "hiya", "hey there"]):
+        elif any(x in msg_lower for x in ["code", "function", "javascript", "python"]):
+            return "technical"
+        elif any(x in msg_lower for x in ["hello", "hi", "hey", "greetings"]):
             return "greeting"
         else:
             return "general"
@@ -1142,7 +1261,7 @@ def get_providers():
 
 @app.route('/ai/chat', methods=['POST'])
 def chat():
-    """Main chat endpoint"""
+    """Main chat endpoint - uses intelligent context-aware responses"""
     try:
         data = request.get_json()
         message = data.get('message', '')
@@ -1151,7 +1270,8 @@ def chat():
         if not message:
             return jsonify({"error": "No message provided"}), 400
 
-        result = chronex_python.process_message(message, history)
+        # Use the new simplified intelligent processor
+        result = chronex_python.process_message_simplified(message, history)
         return jsonify(result)
 
     except Exception as e:
@@ -1195,11 +1315,6 @@ def solve_math():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/ai/config', methods=['GET'])
-def get_config():
-    """Get AI configuration"""
-    return jsonify(CHRONEX_CONFIG)
-
 @app.route('/ai/status', methods=['GET'])
 def status():
     """Health check endpoint"""
@@ -1215,11 +1330,6 @@ def reset():
     """Reset conversation history"""
     chronex_python.conversation_history = []
     return jsonify({"success": True, "message": "Conversation history cleared"})
-
-@app.route('/ai/creator', methods=['GET'])
-def get_creator():
-    """Get creator information"""
-    return jsonify(creator())
 
 # ============ IMAGE PROCESSING ENDPOINTS ============
 
@@ -1469,7 +1579,6 @@ if __name__ == '__main__':
     
     logger.info("✨ Chronex AI (Python Backend) is running on NEXCHAT - The future is initialized!")
 
-# ============ ADDITIONAL INFO & CREDITS ============
 
 def print_info():
     """Print system information and credits"""
@@ -1518,5 +1627,4 @@ if __name__ == '__main__':
         port=port,
         debug=debug,
         threaded=True
-    )
-
+    ) 
