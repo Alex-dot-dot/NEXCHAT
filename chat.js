@@ -4140,37 +4140,61 @@ async function setupInitialization() {
         window.tokenSnapshotUnsubscribe = tokenSnapshotUnsubscribe;
 
         // Listen for incoming messages to auto-add users to chat list
+        // Listen for incoming messages to auto-add users to chat list
+        // OPTIMIZED: Added limit and orderBy to prevent fetching entire history causing lag
+        // Also removed sequential awaits inside loop
         const incomingMessagesQuery = query(
           collection(db, "messages"),
-          where("to", "==", myUID)
+          where("to", "==", myUID),
+          orderBy("timestamp", "desc"),
+          limit(50)
         );
 
         const incomingMessagesUnsubscribe = onSnapshot(incomingMessagesQuery, async (snapshot) => {
-          for (const change of snapshot.docChanges()) {
+          // Collect new senders first to avoid multiple DB operations
+          const newSenders = new Set();
+
+          snapshot.docChanges().forEach(change => {
             if (change.type === 'added') {
-              const messageData = change.doc.data();
-              const senderUID = messageData.from;
-
-              // Auto-add sender to contacts if not already there
-              try {
-                const myUserRef = doc(db, "users", myUID);
-                const myUserDoc = await getDoc(myUserRef);
-                const myContacts = myUserDoc.data()?.contacts || [];
-
-                if (!myContacts.includes(senderUID) && senderUID !== myUID) {
-                  myContacts.push(senderUID);
-                  await updateDoc(myUserRef, { contacts: myContacts });
-                  console.log("✅ Auto-added", senderUID, "to contacts from incoming message");
-
-                  // Reload contacts to show new sender in chat list
-                  loadContacts();
-                }
-              } catch (err) {
-                console.warn("Could not auto-add sender to contacts:", err);
+              const data = change.doc.data();
+              if (data.from && data.from !== myUID) {
+                newSenders.add(data.from);
               }
             }
+          });
+
+          if (newSenders.size === 0) return;
+
+          try {
+            // Fetch user doc ONCE instead of N times
+            const myUserRef = doc(db, "users", myUID);
+            const myUserDoc = await getDoc(myUserRef);
+
+            if (!myUserDoc.exists()) return;
+
+            const myContacts = myUserDoc.data()?.contacts || [];
+            let updated = false;
+
+            for (const senderUID of newSenders) {
+              if (!myContacts.includes(senderUID)) {
+                myContacts.push(senderUID);
+                updated = true;
+                console.log("✅ Auto-added", senderUID, "to contacts");
+              }
+            }
+
+            if (updated) {
+              await updateDoc(myUserRef, { contacts: myContacts });
+              // Reload contacts to show new senders
+              if (typeof loadContacts === 'function') loadContacts();
+            }
+          } catch (err) {
+            console.warn("Could not auto-add sender to contacts:", err);
           }
         }, (error) => {
+          if (error.code === 'failed-precondition') {
+            console.warn("⚠️ Index missing for incoming messages query. Please create 'messages' index: to (Asc) + timestamp (Desc)");
+          }
           console.warn("Error listening to incoming messages:", error);
         });
 

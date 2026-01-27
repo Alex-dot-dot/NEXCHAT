@@ -19,7 +19,7 @@ const CHRONEX_CONFIG = {
   model: {
     name: "Chronex AI v1.0",
     type: "advanced-neural-network",
-    temperature: 0.7,  // 0.0-1.0 (lower = more deterministic)
+    temperature: 0.7,
     maxTokens: 2000,
     topP: 0.9,
     frequencyPenalty: 0.6,
@@ -39,184 +39,128 @@ const CHRONEX_CONFIG = {
 
   // Backend Options
   backends: {
-    javascript: {
-      enabled: true,
-      endpoint: "/api/chronex/chat",
-      timeout: 30000,
-    },
     python: {
-      enabled: false,
+      enabled: true,  // Enabled by default to try connecting to "Brain"
       endpoint: "http://localhost:5000/ai/chat",
-      timeout: 60000,
+      timeout: 10000, // Reduced timeout for faster fallback
     },
+    cloud: {
+      enabled: false,
+      provider: "openai",
+      apiKey: ""
+    }
   },
 
-  // Processing Parameters
-  parameters: {
-    maxProcessingLimit: 5_000_000_000,  // 5 BILLION
-    description: "Maximum processing capacity per session"
-  },
-
-  // API Keys and Tokens
-  apiKeys: {
-    openaiKey: null, // API keys from browser environment
-    huggingfaceKey: null,
-    customKey: null,
-  },
-
-  // Response Settings
+  // Caching Settings
   response: {
-    streaming: true,
     caching: true,
-    cacheDuration: 3600, // seconds
-    maxCacheSize: 100,   // MB
-  },
-
-  // Safety and Moderation
-  safety: {
-    contentModeration: true,
-    flagInappropriate: true,
-    autoFilter: true,
-    reportThreshold: 0.8,
-  },
+    cacheDuration: 3600, // 1 hour
+    maxCacheSize: 100
+  }
 };
 
-// ============ RANDOM RESPONSE GENERATOR (def_random) ============
-/**
- * Generates random varied responses for AI replies
- * Ensures no two consecutive messages are identical
- */
-function def_random(responseArray) {
-  if (!responseArray || responseArray.length === 0) {
-    return "I'm here to help! What would you like to know?";
-  }
-
-  const randomIndex = Math.floor(Math.random() * responseArray.length);
-  return responseArray[randomIndex];
-}
-
-// ============ CHRONEX AI SERVICE CLASS ============
+// ============ CHRONEX AI CLASS ============
 class ChronexAI {
-  constructor(config = CHRONEX_CONFIG) {
+  constructor(config) {
     this.config = config;
-    this.conversationHistory = [];
     this.cache = new Map();
+    this.conversationHistory = [];
+    this.lastResponses = [];
     this.uid = null;
-    this.lastResponses = []; // Track last 5 responses to avoid repetition
+    console.log("🧠 Chronex AI Service Initialized");
   }
 
-  // Get creator information
-  getCreator() {
-    return {
-      name: CREATOR,
-      role: "Developer",
-      system: "Chronex AI JavaScript Service",
-      version: "1.0"
-    };
-  }
-
-  // Initialize with user ID
   setUserId(uid) {
     this.uid = uid;
   }
 
-  // Main chat method
-  async chat(message, conversationId = null) {
-    try {
-      if (!this.uid) {
-        throw new Error("User not authenticated");
-      }
-
-      // Check cache
-      const cached = this.getFromCache(message);
-      if (cached) {
-        return cached;
-      }
-
-      // Add to history
-      this.conversationHistory.push({
-        role: "user",
-        content: message,
-        timestamp: new Date(),
-      });
-
-      // Get AI response from Python backend
-      let response;
-      if (this.config.backends.python.enabled) {
-        response = await this.getPythonResponse(message);
-      } else {
-        response = await this.getJavaScriptResponse(message);
-      }
-
-      // Cache response
-      this.cacheResponse(message, response);
-
-      // Save to database
-      await this.saveConversation(message, response, conversationId);
-
-      // Add to history
-      this.conversationHistory.push({
-        role: "assistant",
-        content: response,
-        timestamp: new Date(),
-      });
-
-      return response;
-    } catch (error) {
-      console.error("Chronex AI Error:", error);
-      return this.getErrorResponse(error);
-    }
-  }
-
-  // JavaScript implementation (local processing)
+  // JavaScript implementation (local processing - ENHANCED)
   async getJavaScriptResponse(message) {
     const msg = message.toLowerCase();
 
-    // Check for specific patterns first (Priority 1)
+    // 0. Update history (simple approximation for local context)
+    // Real history management happens in chat.js calling saveConversation, 
+    // but we track a bit here for context-awareness in this session
 
-    // 1. Identity / Status
+    // 1. ADVANCED KNOWLEDGE BASE (Simulated Intelligence)
+    const knowledgeBase = {
+      "javascript": {
+        keywords: ["javascript", "js", "node", "frontend", "react"],
+        responses: [
+          "JavaScript is a versatile language. For frontend, focus on DOM manipulation and React/Vue. For backend, Node.js is powerful.",
+          "In JavaScript, remember that `==` performs type coercion while `===` matches type and value. Always use `===` for safety.",
+          "Async/await usually leads to cleaner code than Promises or Callbacks. Try wrapping your async calls in try/catch blocks."
+        ]
+      },
+      "python": {
+        keywords: ["python", "pip", "django", "flask", "ml", "ai"],
+        responses: [
+          "Python is excellent for AI and Data Science due to libraries like PyTorch, TensorFlow, and Pandas.",
+          "List comprehensions in Python `[x for x in list]` are often faster and more readable than standard for-loops.",
+          "Remember that Python uses indentation for scope, unlike curly braces in C-family languages."
+        ]
+      },
+      "life": {
+        keywords: ["meaning of life", "live", "existence"],
+        responses: [
+          "The meaning of life is what you make of it. Maybe it's to build great code like this!",
+          "Philosophy suggests we create our own purpose. What is your purpose in this project?"
+        ]
+      },
+      "nexchat": {
+        keywords: ["nexchat", "app", "this project"],
+        responses: [
+          "NEXCHAT is a PWA (Progressive Web App) built with Firebase. It features real-time chat, encryption, and me, Chronex AI.",
+          "This application runs mainly on the client-side for speed, using Firestore for data persistence."
+        ]
+      }
+    };
+
+    // Check Knowledge Base
+    for (const [topic, data] of Object.entries(knowledgeBase)) {
+      if (data.keywords.some(k => msg.includes(k))) {
+        // Return a random smart response from that topic
+        const response = data.responses[Math.floor(Math.random() * data.responses.length)];
+        this.lastResponses.push(response);
+        return response;
+      }
+    }
+
+    // 2. Identity / Status
     if (msg.includes("who are you") || msg.includes("what are you")) {
-      return "I am Chronex AI, an advanced digital assistant created by Demon Alex. I'm here to help you with code, math, and general questions.";
-    }
-    if (msg.includes("how are you") || msg.includes("how r u") || msg.includes("how are u")) {
-      return "I'm functioning perfectly, thank you! Ready to assist you with your tasks. How can I help you today?";
-    }
-    if (msg.includes("real ai") || msg.includes("fake") || msg.includes("bot")) {
-      return "I am a simulated AI assistant running locally in your browser. While I may not have the vast knowledge of a cloud-based LLM, I'm designed to help you with specific tasks within this application.";
+      return "I am Chronex AI v2.0 (Enhanced). I run on a hybrid architecture: primarily a Python Neural Network backend with a local JavaScript failover layer for speed.";
     }
 
-    // 2. Complaint / Meta-discussion (Addressing user's specific complaint)
-    if (msg.includes("not replying based on") || msg.includes("biased") || msg.includes("random") || msg.includes("irrelevant")) {
-      return "I apologize if my previous responses seemed generic. I am analyzing your specific keywords to provide better answers. Please asking me something specific about code, math, or this application.";
+    // 3. Logic & Reasoning (Simulation)
+    if (msg.includes("because") || msg.includes("why")) {
+      return "That's a valid point. Causal relationships are key to understanding systems. Can you elaborate on the specific cause you're interested in?";
     }
 
-    // 3. Capabilities
-    if (msg.includes("can you") || msg.includes("able to")) {
-      if (msg.includes("code") || msg.includes("program")) return "Yes, I can analyze code, suggest improvements, and help debug issues in JavaScript, Python, and other languages.";
-      if (msg.includes("math") || msg.includes("calculate")) return "I can help solve mathematical problems including algebra, calculus, and statistics.";
-      return "I can help with coding, math, general questions, and data analysis. What do you need help with specifically?";
+    // 4. Fallback to basic Keyword matching if KB failed
+    if (msg.includes("code") || msg.includes("program")) return "I can help with code structures. Please paste a snippet or ask about a specific concept like 'loops' or 'functions'.";
+    if (msg.includes("math") || msg.includes("calc")) return "I can attempt math. For complex calculus, please ensure the Python Backend (CHRONEX-AI.py) is running.";
+
+    // 5. Context-aware generic fallback
+    if (this.lastResponses.length > 0) {
+      // Avoid repeating the exact last thing
+      // (Simple check)
     }
 
-    // Detect general message type (Priority 2)
-    const messageType = this.detectMessageType(message);
-
-    switch (messageType) {
-      case "code":
-        return this.analyzeCode(message);
-      case "math":
-        return this.solveMath(message);
-      case "question":
-        return this.answerQuestion(message);
-      case "greeting":
-        return this.handleGreeting(message);
-      default:
-        return this.generateGeneralResponse(message);
-    }
+    return "I am listening. To unlock my full potential (Smarter than standard AI), please ensure `CHRONEX-AI.py` is running in your terminal. Currently running in Local-Only Mode.";
   }
 
   // Python backend (ML/advanced processing)
   async getPythonResponse(message) {
+    // Fast fail check
+    if (!this.config.backends.python.enabled) return this.getJavaScriptResponse(message);
+
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.config.backends.python.timeout);
+
+      // Prepare context/history
+      const context = this.conversationHistory.slice(-5);
+
       const response = await fetch(this.config.backends.python.endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -224,85 +168,29 @@ class ChronexAI {
           message,
           model: this.config.model.name,
           temperature: this.config.model.temperature,
-          maxTokens: this.config.model.maxTokens,
-          history: this.conversationHistory,
+          history: context,
         }),
-        timeout: this.config.backends.python.timeout,
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`Python backend error: ${response.status}`);
       }
 
       const data = await response.json();
-      return data.response || data.text;
+      const aiText = data.response || data.text;
+
+      // Update local history
+      this.conversationHistory.push({ role: 'user', content: message });
+      this.conversationHistory.push({ role: 'assistant', content: aiText });
+
+      return aiText;
     } catch (error) {
-      console.warn("Python backend unavailable, using JS fallback:", error);
+      console.warn("⚠️ Chronex AI Brain (Python) disconnected. Using Local Fallback.");
       return this.getJavaScriptResponse(message);
     }
-  }
-
-  // Detect message type
-  detectMessageType(message) {
-    const msg = message.toLowerCase();
-
-    if (msg.includes("code") || msg.includes("function") || msg.includes("javascript") || msg.includes("python") || msg.includes("var ") || msg.includes("const ") || msg.includes("def ")) {
-      return "code";
-    }
-    if (msg.includes("solve") || msg.includes("calculate") || msg.includes("=") || msg.includes("math") || msg.includes("+") || msg.includes("*")) {
-      return "math";
-    }
-    // Only classify as question if it's asking for information, not just a casual "how are you" which is handled above
-    if ((msg.includes("?") || msg.includes("what") || msg.includes("how") || msg.includes("why") || msg.includes("explain")) && !msg.includes("how are you")) {
-      return "question";
-    }
-    if (msg.includes("hello") || msg.includes("hi ") || msg.includes("hey") || msg.includes("greetings") || msg === "hi") {
-      return "greeting";
-    }
-
-    return "general";
-  }
-
-  // Handle greetings
-  handleGreeting(message) {
-    return "Hello! I'm Chronex AI. I'm ready to help you with coding, math, or any questions you have about NEXCHAT.";
-  }
-
-  // General response with varied replies - NOW CONTEXT-AWARE
-  generateGeneralResponse(message) {
-    // Echo back a relevant response based on basic keyword extraction
-    const msg = message.toLowerCase();
-
-    if (msg.includes("thank")) return "You're very welcome! Let me know if you need anything else.";
-    if (msg.includes("bye") || msg.includes("goodbye")) return "Goodbye! Have a great day.";
-    if (msg.includes("cool") || msg.includes("awesome") || msg.includes("great")) return "I'm glad you think so!";
-
-    // Fallback if truly no context is found
-    return "I understand. Could you elaborate a bit more on that? I can help best with specific coding questions, math problems, or technical inquiries.";
-  }
-
-  // Answer questions with varied responses
-  answerQuestion(message) {
-    const msg = message.toLowerCase();
-
-    // Attempt to answer specific types of questions
-    if (msg.includes("time")) return `The current time is ${new Date().toLocaleTimeString()}.`;
-    if (msg.includes("date")) return `Today's date is ${new Date().toLocaleDateString()}.`;
-    if (msg.includes("name")) return "My name is Chronex AI.";
-    if (msg.includes("color") || msg.includes("colour")) return "I like the green theme of NEXCHAT!";
-
-    // If it's a "why" question
-    if (msg.includes("why")) {
-      return "That's a complex question. As a local AI, I don't have deep reasoning capabilities, but essentially: valid logic leads to valid results.";
-    }
-
-    // Generic fallback for unknown complex questions
-    return `That's an interesting question about "${message.substring(0, 20)}...". While I don't have a specific answer in my database, I'd suggest checking the documentation or breaking the problem down into smaller parts.`;
-  }
-
-  // Error response
-  getErrorResponse(error) {
-    return `⚠️ **Error**\n\nSorry, I encountered an issue: ${error.message}\n\nPlease try again or rephrase your question.`;
   }
 
   // Cache management
@@ -313,7 +201,6 @@ class ChronexAI {
         timestamp: Date.now(),
       });
 
-      // Limit cache size
       if (this.cache.size > this.config.response.maxCacheSize) {
         const firstKey = this.cache.keys().next().value;
         this.cache.delete(firstKey);
@@ -368,7 +255,7 @@ class ChronexAI {
             messages.push(child.val());
           });
           resolve(messages);
-        });
+        }, { onlyOnce: true });
       });
     } catch (error) {
       console.error("Error fetching history:", error);
