@@ -752,45 +752,8 @@ function showChatDetailView() {
 
 // ============ SEARCH AND FILTER FUNCTIONS ============
 
-function filterChats(query) {
-  const chatItems = document.querySelectorAll(".chat-list li[data-chat-id]");
-  chatItems.forEach(item => {
-    const name = item.textContent.toLowerCase();
-    if (query === "" || name.includes(query)) {
-      item.style.display = "block";
-    } else {
-      item.style.display = "none";
-    }
-  });
-}
-
-function applyFilter(filter) {
-  const chatItems = document.querySelectorAll(".chat-list li[data-chat-id]");
-  chatItems.forEach(item => {
-    const isUnread = item.dataset.unread === "true";
-    const isFavorite = item.dataset.favorite === "true";
-    const isGroup = item.dataset.isGroup === "true";
-
-    let shouldShow = true;
-
-    switch (filter) {
-      case "unread":
-        shouldShow = isUnread;
-        break;
-      case "favorites":
-        shouldShow = isFavorite;
-        break;
-      case "groups":
-        shouldShow = isGroup;
-        break;
-      case "all":
-        shouldShow = true;
-        break;
-    }
-
-    item.style.display = shouldShow ? "block" : "none";
-  });
-}
+// function filterChats and applyFilter removed (duplicates). 
+// See lines 6628+ for valid definitions.
 
 async function archiveChat(chatId) {
   try {
