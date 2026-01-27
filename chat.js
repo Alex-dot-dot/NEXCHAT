@@ -248,7 +248,7 @@ async function showGroupInfoPanel(groupId) {
     const infoNameEl = document.getElementById('infoName');
     const infoPicEl = document.getElementById('infoPic');
     const infoMemberCountEl = document.getElementById('infoMemberCount');
-    
+
     if (infoNameEl) infoNameEl.textContent = groupData.name || 'Group';
     if (infoPicEl) infoPicEl.src = infoPic || '👥';
     if (infoMemberCountEl) infoMemberCountEl.textContent = `Group · ${members.length} members`;
@@ -350,7 +350,7 @@ async function showUserInfoPanel(userId) {
     const infoNameEl = document.getElementById('infoName');
     const infoPicEl = document.getElementById('infoPic');
     const infoMemberCountEl = document.getElementById('infoMemberCount');
-    
+
     if (infoNameEl) infoNameEl.textContent = userData.username || userData.name || 'User';
     if (infoPicEl) infoPicEl.src = userData.profilePic || userData.profilePicUrl || '👤';
     if (infoMemberCountEl) infoMemberCountEl.textContent = userData.email || 'User Profile';
@@ -893,7 +893,7 @@ async function showChatContextMenu(event, chatId) {
   // Create context menu
   const menu = document.createElement("div");
   menu.className = "chat-context-menu";
-  
+
   // Find the chat list item and position menu relative to it
   const chatItem = document.querySelector(`li[data-chat-id="${chatId}"]`);
   if (chatItem) {
@@ -1062,11 +1062,11 @@ async function unmuteChat(chatId) {
   try {
     const userRef = doc(db, "users", myUID);
     const userDoc = await getDoc(userRef);
-    
+
     if (userDoc.exists()) {
       let mutedChats = userDoc.data().mutedChats || [];
       mutedChats = mutedChats.filter(id => id !== chatId);
-      
+
       await updateDoc(userRef, {
         mutedChats: mutedChats
       });
@@ -1084,7 +1084,7 @@ async function isChatMuted(chatId) {
   try {
     const userRef = doc(db, "users", myUID);
     const userDoc = await getDoc(userRef);
-    
+
     if (userDoc.exists()) {
       const mutedChats = userDoc.data().mutedChats || [];
       return mutedChats.includes(chatId);
@@ -1997,17 +1997,17 @@ async function sendMessage(e) {
     if (currentChatType === 'ai') {
       // AI Chat - Chronex AI
       console.log("🤖 Sending message to Chronex AI");
-      
+
       // Display user message immediately
       displayChronexAIUserMessage(text);
-      
+
       try {
         // Send to AI and get response
         const aiResponse = await chronexAI.chat(text, `chronex-${myUID}`);
-        
+
         // Display AI response
         displayChronexAIResponse(aiResponse);
-        
+
         // Deduct 1 token
         await updateDoc(userRef, {
           tokens: newTokens,
@@ -2322,7 +2322,7 @@ function loadMessages() {
 
       const content = document.createElement("p");
       content.style.margin = "0";
-      
+
       // Check if message is an audio file
       if (m.attachment && m.attachment.fileType && m.attachment.fileType.startsWith('audio/')) {
         // Create audio player
@@ -2431,29 +2431,29 @@ function updateChatProfileDisplay(username, profilePic, status = 'Online') {
   // Update header active chat info
   const headerLogoContainer = document.getElementById("headerLogoContainer");
   const activeChatHeader = document.getElementById("activeChatHeader");
-  
+
   if (headerLogoContainer && activeChatHeader) {
     headerLogoContainer.style.display = 'none';
     activeChatHeader.style.display = 'flex';
-    
+
     const activeChatName = document.getElementById("activeChatName");
     const activeChatStatus = document.getElementById("activeChatStatus");
     const activeChatAvatar = document.getElementById("activeChatAvatar");
-    
+
     if (activeChatName) activeChatName.textContent = username;
     if (activeChatStatus) activeChatStatus.textContent = status;
     if (activeChatAvatar) activeChatAvatar.src = profilePic || "👤";
   }
-  
+
   // Update message input area profile display
   const chatUserProfile = document.getElementById("chatUserProfile");
   if (chatUserProfile) {
     chatUserProfile.style.display = 'flex';
-    
+
     const chatUserName = document.getElementById("chatUserName");
     const chatUserStatus = document.getElementById("chatUserStatus");
     const chatUserAvatar = document.getElementById("chatUserAvatar");
-    
+
     if (chatUserName) chatUserName.textContent = username;
     if (chatUserStatus) chatUserStatus.textContent = status;
     if (chatUserAvatar) chatUserAvatar.src = profilePic || "👤";
@@ -2465,7 +2465,7 @@ function hideChatProfileDisplay() {
   const headerLogoContainer = document.getElementById("headerLogoContainer");
   const activeChatHeader = document.getElementById("activeChatHeader");
   const chatUserProfile = document.getElementById("chatUserProfile");
-  
+
   if (headerLogoContainer) headerLogoContainer.style.display = 'block';
   if (activeChatHeader) activeChatHeader.style.display = 'none';
   if (chatUserProfile) chatUserProfile.style.display = 'none';
@@ -2474,7 +2474,7 @@ function hideChatProfileDisplay() {
 async function openChat(uid, username, profilePic, chatType = 'direct') {
   currentChatUser = uid;
   currentChatType = chatType; // Store chat type (direct or group)
-  
+
   // Update the profile display immediately
   updateChatProfileDisplay(username, profilePic, "Loading...");
 
@@ -2482,14 +2482,14 @@ async function openChat(uid, username, profilePic, chatType = 'direct') {
   // Update chat header elements (with null checks)
   const chatNameEl = document.getElementById("chatName");
   if (chatNameEl) chatNameEl.textContent = username;
-  
+
   const chatProfilePicEl = document.getElementById("chatProfilePic");
   if (chatProfilePicEl) chatProfilePicEl.src = profilePic || "👤";
 
   // Update info sidebar (with null checks)
   const infoNameEl = document.getElementById("infoName");
   if (infoNameEl) infoNameEl.textContent = username;
-  
+
   const infoPicEl = document.getElementById("infoPic");
   if (infoPicEl) infoPicEl.src = profilePic || "👤";
 
@@ -2501,13 +2501,13 @@ async function openChat(uid, username, profilePic, chatType = 'direct') {
         const groupData = groupDoc.data();
         const infoEmailEl = document.getElementById("infoEmail");
         if (infoEmailEl) infoEmailEl.textContent = `Members: ${groupData.members.length} `;
-        
+
         const statusTextEl = document.getElementById("statusText");
         if (statusTextEl) statusTextEl.textContent = `👥 Group Chat`;
-        
+
         const infoStatusEl = document.getElementById("infoStatus");
         if (infoStatusEl) infoStatusEl.textContent = `👥 Group Chat`;
-        
+
         // Update profile display with group status
         updateChatProfileDisplay(username, profilePic, "👥 Group Chat");
 
@@ -2532,13 +2532,13 @@ async function openChat(uid, username, profilePic, chatType = 'direct') {
       // Handle AI chat type (Chronex AI)
       const infoEmailEl = document.getElementById("infoEmail");
       if (infoEmailEl) infoEmailEl.textContent = "Advanced AI Assistant";
-      
+
       const statusTextEl = document.getElementById("statusText");
       if (statusTextEl) statusTextEl.textContent = "🤖 AI Ready";
-      
+
       const infoStatusEl = document.getElementById("infoStatus");
       if (infoStatusEl) infoStatusEl.textContent = "🤖 AI Ready";
-      
+
       // Update profile display with AI status
       updateChatProfileDisplay(username, profilePic, "🤖 AI Ready");
 
@@ -2552,14 +2552,14 @@ async function openChat(uid, username, profilePic, chatType = 'direct') {
         userData = userDoc.data();
         const infoEmail = document.getElementById("infoEmail");
         if (infoEmail) infoEmail.textContent = userData.email || "";
-        
+
         const statusText = userData.online ? "🟢 Online" : "⚫ Offline";
         const statusTextEl = document.getElementById("statusText");
         if (statusTextEl) statusTextEl.textContent = statusText;
-        
+
         const infoStatusEl = document.getElementById("infoStatus");
         if (infoStatusEl) infoStatusEl.textContent = statusText;
-        
+
         // Update profile display with user status
         updateChatProfileDisplay(username, profilePic, statusText);
       } else {
@@ -2567,16 +2567,16 @@ async function openChat(uid, username, profilePic, chatType = 'direct') {
         console.warn("User document not found in database, but proceeding with UID:", uid);
         const infoEmail = document.getElementById("infoEmail");
         if (infoEmail) infoEmail.textContent = "Profile pending...";
-        
+
         const statusTextEl = document.getElementById("statusText");
         if (statusTextEl) statusTextEl.textContent = "⚪ Pending";
-        
+
         const infoStatusEl = document.getElementById("infoStatus");
         if (infoStatusEl) infoStatusEl.textContent = "⚪ Pending";
-        
+
         // Update profile display with pending status
         updateChatProfileDisplay(username, profilePic, "⚪ Pending");
-        
+
         showNotif("ℹ️ User profile not fully synced yet. Chat enabled via UID.", "info");
       }
 
@@ -3206,13 +3206,13 @@ document.getElementById("nav-announcements")?.addEventListener("click", () => {
     statusContainer.style.display = "none";
     groupsContainer.style.display = "none";
     announcementsContainer.style.display = "flex";
-    
+
     // Remove active from other nav items
     document.getElementById("nav-messages").classList.remove("active");
     document.getElementById("nav-status").classList.remove("active");
     document.getElementById("nav-groups").classList.remove("active");
     document.getElementById("nav-announcements").classList.add("active");
-    
+
     loadAnnouncements();
     showNotif("📢 Announcements", "info", 800);
   } else {
@@ -3268,7 +3268,7 @@ document.getElementById("file-input")?.addEventListener("change", (e) => {
   selectedFile = file;
   showAttachmentPreview(file);
   showNotif(`✅ File selected: ${file.name} `, "success", 1500);
-  try { document.dispatchEvent(new CustomEvent('selectedFileChanged')); } catch(e){}
+  try { document.dispatchEvent(new CustomEvent('selectedFileChanged')); } catch (e) { }
 });
 
 function showAttachmentPreview(file) {
@@ -3295,7 +3295,7 @@ function removeAttachment() {
   if (preview) preview.style.display = "none";
 
   showNotif("✗ Attachment removed", "info", 1000);
-  try { document.dispatchEvent(new CustomEvent('selectedFileChanged')); } catch(e){}
+  try { document.dispatchEvent(new CustomEvent('selectedFileChanged')); } catch (e) { }
 }
 
 async function uploadFileToStorage(file, chatId, isGroup = false) {
@@ -3524,7 +3524,7 @@ async function loadTokenBalance() {
   try {
     const userRef = doc(db, "users", myUID);
     const userDoc = await getDoc(userRef);
-    
+
     if (userDoc.exists()) {
       const tokens = userDoc.data()?.tokens ?? 0;
       const balanceEl = document.getElementById("currentTokenBalance");
@@ -3570,7 +3570,9 @@ function loadSettingsPreferences() {
 
     // Load chat size preference
     const chatSize = prefs.chatSize || "medium";
-    const chatSizeEl = document.getElementById("chatSize" + chatSize.charAt(0).toUpperCase() + chatSize.slice(1).replace("-", ""));
+    // Convert "extra-large" to "ExtraLarge" for element ID lookup
+    const chatSizeFormatted = chatSize.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('');
+    const chatSizeEl = document.getElementById("chatSize" + chatSizeFormatted);
     if (chatSizeEl) chatSizeEl.checked = true;
 
     // Load text adjustment preferences
@@ -3687,7 +3689,7 @@ function applySettings(prefs) {
       messagesContainer.style.fontFamily = fontFamily;
       messagesContainer.style.letterSpacing = letterSpacing;
       messagesContainer.style.lineHeight = lineHeight;
-      
+
       // Apply alignment to message items
       document.querySelectorAll('.message-item').forEach(msg => {
         msg.style.textAlign = textAlignment;
@@ -4109,10 +4111,10 @@ async function setupInitialization() {
           const tokenCount = userData.tokens ?? 0;
           console.log("💰 Token count from Firebase:", tokenCount);
           console.log("💰 User data:", userData);
-          
+
           const tokenDisplay = document.getElementById("tokenCount");
           console.log("💰 Token display element:", tokenDisplay);
-          
+
           if (tokenDisplay) {
             tokenDisplay.textContent = tokenCount;
             console.log("✅ Token display updated to:", tokenCount);
@@ -4494,12 +4496,12 @@ async function setupInitialization() {
 
   const loadChatBackground = async (chatId, chatType) => {
     try {
-      const bgDocPath = chatType === 'group' 
-        ? `groupBackgrounds/${chatId}` 
+      const bgDocPath = chatType === 'group'
+        ? `groupBackgrounds/${chatId}`
         : `directMessageBackgrounds/${myUID}_${chatId}`;
-      
+
       const bgDoc = await getDoc(doc(db, bgDocPath.split('/')[0], bgDocPath.split('/')[1]));
-      
+
       if (bgDoc.exists() && bgDoc.data().backgroundUrl) {
         applyBackgroundImage(bgDoc.data().backgroundUrl);
         localStorage.setItem(`chat_bg_${chatId}`, bgDoc.data().backgroundUrl);
@@ -4536,7 +4538,7 @@ async function setupInitialization() {
       const bgPath = currentChatType === 'group'
         ? `chatBackgrounds/groups/${currentChatUser}/${Date.now()}`
         : `chatBackgrounds/direct/${myUID}_${currentChatUser}/${Date.now()}`;
-      
+
       const bgRef = storageRef(storage, bgPath);
       const snapshot = await uploadBytes(bgRef, file);
       const bgUrl = await getDownloadURL(snapshot.ref);
@@ -6159,7 +6161,7 @@ function viewStatus(status) {
 async function loadAnnouncements() {
   try {
     const announcementsFeed = document.getElementById('announcementsFeed');
-    
+
     const q = query(
       collection(db, 'announcements'),
       orderBy('createdAt', 'desc'),
@@ -6187,7 +6189,7 @@ async function loadAnnouncements() {
 
       const createdTime = announcement.createdAt?.toDate ? announcement.createdAt.toDate() : new Date(announcement.createdAt);
       const timeDiff = Math.floor((Date.now() - createdTime.getTime()) / 1000);
-      
+
       let timeText = 'Just now';
       if (timeDiff < 60) {
         timeText = 'Just now';
@@ -6623,6 +6625,57 @@ async function handleStatusPost(text, file) {
 
 // ============ GLOBAL UTILITY FUNCTIONS ============
 
+function filterChats(query) {
+  const chatItems = document.querySelectorAll("#contactList .chat-list-item");
+  query = query.toLowerCase();
+
+  chatItems.forEach(item => {
+    // Skip chronex or empty state if needed, or filter them too
+    const nameEl = item.querySelector(".chat-name");
+    const name = nameEl ? nameEl.textContent.toLowerCase() : "";
+
+    // Also search in preview
+    const previewEl = item.querySelector(".chat-preview");
+    const preview = previewEl ? previewEl.textContent.toLowerCase() : "";
+
+    if (name.includes(query) || preview.includes(query)) {
+      item.style.display = "flex";
+    } else {
+      item.style.display = "none";
+    }
+  });
+}
+
+function applyFilter(filterType) {
+  const chatItems = document.querySelectorAll("#contactList .chat-list-item");
+  // Reset all first
+  if (filterType === 'all') {
+    chatItems.forEach(item => {
+      item.style.display = "flex";
+    });
+    return;
+  }
+
+  chatItems.forEach(item => {
+    let shouldShow = false;
+
+    if (filterType === 'unread') {
+      // Check for unread badge or class
+      const unreadBadge = item.querySelector(".unread-badge");
+      const isUnread = item.classList.contains("unread") || (unreadBadge && unreadBadge.textContent.trim() !== "");
+      if (isUnread) shouldShow = true;
+    } else if (filterType === 'favorites') {
+      // Not implemented, show all or none? Show none for now as no favorites logic exists
+      shouldShow = false;
+    } else if (filterType === 'groups') {
+      const isGroup = item.querySelector(".group-avatar") || item.getAttribute('data-chat-id')?.length > 20; // heuristic
+      if (isGroup) shouldShow = true;
+    }
+
+    item.style.display = shouldShow ? "flex" : "none";
+  });
+}
+
 function switchDarkMode() {
   const body = document.body;
   const toggle = document.getElementById("darkModeToggle");
@@ -6783,7 +6836,7 @@ async function loadGroups() {
         }, 250);
       });
       li.addEventListener("touchend", () => clearTimeout(longPressTimer));
-      
+
       // Three-dot menu button click handler
       const menuBtn = li.querySelector(".chat-menu-btn");
       if (menuBtn) {
@@ -6792,7 +6845,7 @@ async function loadGroups() {
           if (typeof showChatContextMenu === 'function') showChatContextMenu(e, groupId);
         });
       }
-      
+
       groupsList.appendChild(li);
     });
   } catch (err) {
@@ -6876,7 +6929,7 @@ async function loadContacts() {
 
         try {
           const messagesRef = collection(db, "messages");
-          
+
           // Get the last message (from either direction)
           const q1 = query(
             messagesRef,
@@ -6885,7 +6938,7 @@ async function loadContacts() {
             orderBy("timestamp", "desc"),
             limit(1)
           );
-          
+
           const q2 = query(
             messagesRef,
             where("from", "==", uid),
@@ -6961,7 +7014,7 @@ async function loadContacts() {
 
         // Build HTML with unread badge (green dot with count)
         const unreadBadgeHTML = unreadCount > 0 ? `<div class="unread-badge" title="${unreadCount} unread">${unreadCount > 99 ? '99+' : unreadCount}</div>` : '';
-        
+
         li.innerHTML = `
           <div class="chat-avatar-container">${avatar}</div>
           <div class="chat-item-content ${unreadCount > 0 ? 'unread' : ''}">
