@@ -1,0 +1,11 @@
+chat.js:5884 ❌ Failed to load status feed: FirebaseError: The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/nexchat-47326/firestore/in…9pbmRleGVzL18QARoNCglleHBpcmVzQXQQAhoNCgl0aW1lc3RhbXAQAhoMCghfX25hbWVfXxAC
+loadStatusFeed	@	chat.js:5884❌ No chat selected
+sendMessage @ chat.js:1859
+(anonymous) @ chat.js:3915Understand this warning
+chat.js:6002 📤 Send button clicked
+chat.js:1855 📤 Send message triggered
+chat.js:1859 ❌ No chat selected
+and am fucking clicking the send button ✅ PWA Service Worker registered successfully: ServiceWorkerRegistration
+pwa-install.js:156 Scope: https://demonalexander526-alt.github.io/NEXCHAT/
+pwa-install.js:157 State: activated
+chat.js:6324 Uncaught SyntaxError: Identifier 'toggleDarkMode' has already been declared

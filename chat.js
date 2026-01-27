@@ -3573,10 +3573,35 @@ function loadSettingsPreferences() {
     const chatSizeEl = document.getElementById("chatSize" + chatSize.charAt(0).toUpperCase() + chatSize.slice(1).replace("-", ""));
     if (chatSizeEl) chatSizeEl.checked = true;
 
-    // Load element width preference
-    const elementWidth = prefs.elementWidth || "medium";
-    const elementWidthEl = document.getElementById("elementWidth" + elementWidth.charAt(0).toUpperCase() + elementWidth.slice(1));
-    if (elementWidthEl) elementWidthEl.checked = true;
+    // Load text adjustment preferences
+    const fontFamilySelect = document.getElementById("fontFamilySelect");
+    if (fontFamilySelect && prefs.fontFamily) {
+      fontFamilySelect.value = prefs.fontFamily;
+    }
+
+    const letterSpacingRange = document.getElementById("letterSpacingRange");
+    if (letterSpacingRange && prefs.letterSpacing !== undefined) {
+      letterSpacingRange.value = prefs.letterSpacing;
+      document.getElementById("letterSpacingValue").textContent = prefs.letterSpacing;
+    }
+
+    const lineHeightRange = document.getElementById("lineHeightRange");
+    if (lineHeightRange && prefs.lineHeight !== undefined) {
+      lineHeightRange.value = prefs.lineHeight;
+      document.getElementById("lineHeightValue").textContent = prefs.lineHeight;
+    }
+
+    // Load text alignment preference
+    const alignButtons = document.querySelectorAll(".text-align-btn");
+    alignButtons.forEach(btn => {
+      btn.style.background = "#444";
+      btn.style.color = "#fff";
+    });
+    const alignmentBtn = document.getElementById("align" + (prefs.textAlignment || "left").charAt(0).toUpperCase() + (prefs.textAlignment || "left").slice(1));
+    if (alignmentBtn) {
+      alignmentBtn.style.background = "#00ff66";
+      alignmentBtn.style.color = "#000";
+    }
 
     console.log("✅ Settings loaded successfully", prefs);
   } catch (err) {
@@ -3592,6 +3617,15 @@ function saveSettingsPreferences() {
     const onlineEl = document.getElementById("onlineStatusToggle");
     const readEl = document.getElementById("readReceiptsToggle");
 
+    // Get text alignment from active button
+    let textAlignment = "left";
+    const activeAlignBtn = document.querySelector(".text-align-btn[style*='background: rgb(0, 255, 102)']");
+    if (activeAlignBtn) {
+      if (activeAlignBtn.id === "alignLeft") textAlignment = "left";
+      else if (activeAlignBtn.id === "alignCenter") textAlignment = "center";
+      else if (activeAlignBtn.id === "alignRight") textAlignment = "right";
+    }
+
     const prefs = {
       notifications: notifEl?.checked ?? true,
       sound: soundEl?.checked ?? true,
@@ -3599,7 +3633,10 @@ function saveSettingsPreferences() {
       readReceipts: readEl?.checked ?? true,
       theme: document.querySelector('input[name="theme"]:checked')?.value || "dark",
       chatSize: document.querySelector('input[name="chatSize"]:checked')?.value || "medium",
-      elementWidth: document.querySelector('input[name="elementWidth"]:checked')?.value || "medium",
+      fontFamily: document.getElementById("fontFamilySelect")?.value || "Arial, sans-serif",
+      letterSpacing: parseFloat(document.getElementById("letterSpacingRange")?.value) || 0,
+      lineHeight: parseFloat(document.getElementById("lineHeightRange")?.value) || 1.5,
+      textAlignment: textAlignment,
       lastUpdated: new Date().toISOString()
     };
 
@@ -3639,11 +3676,23 @@ function applySettings(prefs) {
     document.body.classList.remove("chat-size-small", "chat-size-medium", "chat-size-large", "chat-size-extra-large");
     document.body.classList.add(`chat-size-${chatSize}`);
 
-    // Apply element width
-    const elementWidth = prefs.elementWidth || "medium";
-    document.documentElement.setAttribute("data-element-width", elementWidth);
-    document.body.classList.remove("element-width-compact", "element-width-small", "element-width-medium", "element-width-large", "element-width-full");
-    document.body.classList.add(`element-width-${elementWidth}`);
+    // Apply text adjustments to messages
+    const messagesContainer = document.querySelector('.messages');
+    if (messagesContainer) {
+      const fontFamily = prefs.fontFamily || "Arial, sans-serif";
+      const letterSpacing = (prefs.letterSpacing || 0) + "px";
+      const lineHeight = prefs.lineHeight || 1.5;
+      const textAlignment = prefs.textAlignment || "left";
+
+      messagesContainer.style.fontFamily = fontFamily;
+      messagesContainer.style.letterSpacing = letterSpacing;
+      messagesContainer.style.lineHeight = lineHeight;
+      
+      // Apply alignment to message items
+      document.querySelectorAll('.message-item').forEach(msg => {
+        msg.style.textAlign = textAlignment;
+      });
+    }
 
     // Vibration test on Android if enabled
     if (isAndroid && navigator.vibrate && prefs.sound) {
@@ -4309,9 +4358,42 @@ async function setupInitialization() {
       radio.addEventListener("change", saveSettingsPreferences, false);
     });
 
-    // Element width radio buttons
-    document.querySelectorAll('input[name="elementWidth"]').forEach(radio => {
-      radio.addEventListener("change", saveSettingsPreferences, false);
+    // Text Element Adjustment - Font Family
+    const fontFamilySelect = document.getElementById("fontFamilySelect");
+    if (fontFamilySelect) {
+      fontFamilySelect.addEventListener("change", saveSettingsPreferences, false);
+    }
+
+    // Text Element Adjustment - Letter Spacing
+    const letterSpacingRange = document.getElementById("letterSpacingRange");
+    if (letterSpacingRange) {
+      letterSpacingRange.addEventListener("input", (e) => {
+        document.getElementById("letterSpacingValue").textContent = e.target.value;
+        saveSettingsPreferences();
+      }, false);
+    }
+
+    // Text Element Adjustment - Line Height
+    const lineHeightRange = document.getElementById("lineHeightRange");
+    if (lineHeightRange) {
+      lineHeightRange.addEventListener("input", (e) => {
+        document.getElementById("lineHeightValue").textContent = e.target.value;
+        saveSettingsPreferences();
+      }, false);
+    }
+
+    // Text Element Adjustment - Text Alignment
+    const alignButtons = document.querySelectorAll(".text-align-btn");
+    alignButtons.forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        alignButtons.forEach(b => {
+          b.style.background = "#444";
+          b.style.color = "#fff";
+        });
+        e.target.style.background = "#00ff66";
+        e.target.style.color = "#000";
+        saveSettingsPreferences();
+      }, false);
     });
   };
 

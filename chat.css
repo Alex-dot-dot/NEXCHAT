@@ -1503,53 +1503,6 @@ html, body {
 
 .chat-size-extra-large .message-time {
   font-size: 14px;
-}
-
-/* ============================================================
-   ELEMENT WIDTH SETTINGS - 5 DIFFERENT WIDTHS
-   ============================================================ */
-
-/* Compact (60%) */
-body.element-width-compact .chat-main,
-body.element-width-compact .chat-detail-view,
-body.element-width-compact .info-panel {
-  max-width: 60%;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-/* Small (70%) */
-body.element-width-small .chat-main,
-body.element-width-small .chat-detail-view,
-body.element-width-small .info-panel {
-  max-width: 70%;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-/* Medium (80%) - Default */
-body.element-width-medium .chat-main,
-body.element-width-medium .chat-detail-view,
-body.element-width-medium .info-panel {
-  max-width: 80%;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-/* Large (90%) */
-body.element-width-large .chat-main,
-body.element-width-large .chat-detail-view,
-body.element-width-large .info-panel {
-  max-width: 90%;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-/* Full Width (100%) */
-body.element-width-full .chat-main,
-body.element-width-full .chat-detail-view,
-body.element-width-full .info-panel {
-  max-width: 100%;
 }.message-attachment {
   margin-top: 10px;
   padding: 10px;
