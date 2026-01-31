@@ -3,7 +3,7 @@ CHRONEX AI - Python Backend
 Advanced AI Assistant with NLP, ML, and Code Analysis
 Python: 3.8+
 Requirements: flask, nltk, requests, numpy, python-dotenv, openai, pillow
-Creator: DEMON ALEX
+Creator: DEMON ALEX - CREATOR OF CHRONEX AI
 """
 
 from flask import Flask, request, jsonify
@@ -11,7 +11,6 @@ from flask_cors import CORS
 import json
 import os
 import random
-import boolean 
 import string
 from datetime import datetime
 import logging
@@ -412,7 +411,7 @@ def creator():
         "secondary_creator": SECONDARY_CREATOR,
         "role": "Developer",
         "system": "Chronex AI Python Backend",
-        "version": "1.0"
+        "version": ""
     }
 
 # ============ CHRONEX AI CONFIGURATION ============
@@ -429,7 +428,7 @@ CHRONEX_CONFIG = {
         "description": "4B parameter model"
     },
     "model": {
-        "name": "Chronex AI v1.0 (Python 4B)",
+        "name": "Chronex AI (Python 4B)",
         "type": "advanced-neural-network",
         "parameters": 4_000_000_000,
         "temperature": 0.7,
@@ -449,29 +448,205 @@ CHRONEX_CONFIG = {
     }
 }
 
-# ============ CHRONEX AI CLASS ============
+# ============ ENHANCED NLP & INTENT SYSTEM ============
+class IntentClassifier:
+    """Advanced intent classification for smarter AI responses"""
+    
+    def __init__(self):
+        self.intents = {
+            "greeting": ["hello", "hi", "hey", "greetings", "good morning", "good afternoon", "good evening"],
+            "question": ["what", "why", "how", "when", "where", "who", "which", "can you", "could you"],
+            "coding": ["code", "function", "class", "variable", "bug", "error", "debug", "compile", "syntax"],
+            "math": ["calculate", "solve", "equation", "formula", "math", "algebra", "calculus", "derivative", "integral"],
+            "explanation": ["explain", "describe", "tell me about", "what is", "define", "meaning"],
+            "help": ["help", "assist", "support", "guide", "teach", "show me"],
+            "creative": ["create", "generate", "build", "design", "make", "develop"],
+            "analysis": ["analyze", "review", "evaluate", "assess", "examine", "check"],
+        }
+        
+    def detect_intent(self, message):
+        """Detect user's intent from message"""
+        msg_lower = message.lower()
+        detected = []
+        
+        for intent, keywords in self.intents.items():
+            if any(keyword in msg_lower for keyword in keywords):
+                detected.append(intent)
+        
+        return detected if detected else ["general"]
+    
+    def extract_entities(self, message):
+        """Extract important entities from message"""
+        entities = {
+            "languages": [],
+            "topics": [],
+            "numbers": []
+        }
+        
+        # Programming languages
+        langs = ["python", "javascript", "java", "c++", "c#", "ruby", "go", "rust", "php", "typescript"]
+        for lang in langs:
+            if lang in message.lower():
+                entities["languages"].append(lang)
+        
+        # Topics
+        topics = ["ai", "machine learning", "data science", "web", "mobile", "database", "api", "cloud"]
+        for topic in topics:
+            if topic in message.lower():
+                entities["topics"].append(topic)
+        
+        # Extract numbers (simple regex would be better)
+        import re
+        numbers = re.findall(r'\d+(?:\.\d+)?', message)
+        entities["numbers"] = numbers
+        
+        return entities
+
+# ============ ENHANCED KNOWLEDGE ENGINE ============
+class KnowledgeEngine:
+    """Advanced knowledge base with contextual retrieval"""
+    
+    def __init__(self):
+        self.knowledge_base = self._build_knowledge_base()
+        
+    def _build_knowledge_base(self):
+        """Build comprehensive knowledge base"""
+        return {
+            "programming_concepts": {
+                "variables": "Variables store data values. In Python: `x = 10` creates a variable. Use descriptive names!",
+                "functions": "Functions are reusable code blocks. Define with `def name(params):` in Python or `function name(params) {}` in JavaScript.",
+                "loops": "Loops repeat code. `for` loops iterate over sequences, `while` loops continue while condition is true.",
+                "classes": "Classes define objects with properties and methods. Use OOP for structured, maintainable code.",
+                "async": "Asynchronous programming handles operations without blocking. Use `async/await` for cleaner async code.",
+            },
+            "ai_ml": {
+                "neural_networks": "Neural networks are AI models inspired by the brain. Layers of neurons process data, learning patterns through training.",
+                "deep_learning": "Deep learning uses multi-layer neural networks for complex pattern recognition in images, text, and more.",
+                "nlp": "Natural Language Processing enables computers to understand human language through tokenization, embeddings, and transformers.",
+                "computer_vision": "Computer vision teaches machines to interpret visual data using CNNs for image classification and object detection.",
+            },
+            "data_structures": {
+                "arrays": "Arrays store ordered collections. Fast access by index O(1), but insertion/deletion can be O(n).",
+                "linked_lists": "Linked lists use nodes with pointers. Efficient insertion O(1) but slower access O(n).",
+                "hash_maps": "Hash maps (dictionaries) provide O(1) average lookup using key-value pairs with hashing.",
+                "trees": "Trees are hierarchical structures. Binary search trees enable O(log n) search with proper balancing.",
+                "graphs": "Graphs represent networks with nodes and edges. Use for social networks, maps, dependencies.",
+            },
+            "algorithms": {
+                "sorting": "Common algorithms: QuickSort O(n log n) average, MergeSort O(n log n) guaranteed, BubbleSort O(n²).",
+                "searching": "Binary search O(log n) on sorted data. Linear search O(n) for unsorted. Hash lookup O(1) average.",
+                "dynamic_programming": "DP optimizes by storing subproblem solutions. Break problems into overlapping subproblems.",
+                "greedy": "Greedy algorithms make locally optimal choices. Works for problems with greedy-choice property.",
+            }
+        }
+    
+    def search(self, query):
+        """Search knowledge base for relevant information"""
+        query_lower = query.lower()
+        results = []
+        
+        for category, items in self.knowledge_base.items():
+            for topic, info in items.items():
+                if topic in query_lower or any(word in query_lower for word in topic.split('_')):
+                    results.append({
+                        "category": category,
+                        "topic": topic,
+                        "information": info
+                    })
+        
+        return results
+
+# ============ CHRONEX AI CLASS (ENHANCED) ============
 class ChronexAIPython:
     def __init__(self, config_obj=None):
         self.config = config_obj or CHRONEX_CONFIG
         self.conversation_history = []
+        self.user_context = {}  # Store user-specific context
         self.ai_provider = RealAIProvider(config_manager.config)
         self.use_real_ai = config_manager.get("use_real_ai", True)
-        logger.info(f"🤖 ChronexAI initialized - Using Real AI: {self.use_real_ai}")
+        
+        # Initialize enhanced components
+        self.intent_classifier = IntentClassifier()
+        self.knowledge_engine = KnowledgeEngine()
+        
+        logger.info(f"🧠 ChronexAI Enhanced - Using Real AI: {self.use_real_ai}")
 
-    def get_ai_response(self, message, context=""):
-        """Get response from real AI - PRIMARY METHOD"""
+    def analyze_message(self, message):
+        """Deep analysis of user message"""
+        analysis = {
+            "intents": self.intent_classifier.detect_intent(message),
+            "entities": self.intent_classifier.extract_entities(message),
+            "complexity": self._assess_complexity(message),
+            "knowledge_matches": self.knowledge_engine.search(message),
+        }
+        return analysis
+    
+    def _assess_complexity(self, message):
+        """Assess message complexity"""
+        word_count = len(message.split())
+        has_technical = any(word in message.lower() for word in 
+                          ["algorithm", "optimize", "architecture", "implementation"])
+        
+        if word_count > 50 or has_technical:
+            return "advanced"
+        elif word_count > 20:
+            return "intermediate"
+        else:
+            return "simple"
+
+    def get_ai_response(self, message, context="", analysis=None):
+        """Get response from real AI - ENHANCED WITH CONTEXT"""
         if self.use_real_ai:
-            real_response = self.ai_provider.generate_response(message, context)
+            # Build enriched context
+            enriched_context = context
+            if analysis:
+                enriched_context += f"\n\nIntent: {', '.join(analysis['intents'])}"
+                if analysis['entities']['languages']:
+                    enriched_context += f"\nProgramming Languages: {', '.join(analysis['entities']['languages'])}"
+                if analysis['knowledge_matches']:
+                    enriched_context += f"\nRelevant Topics: {', '.join([m['topic'] for m in analysis['knowledge_matches'][:3]])}"
+            
+            real_response = self.ai_provider.generate_response(message, enriched_context)
             if real_response:
-                logger.info(f"✅ Real AI response generated")
+                logger.info(f"✅ Real AI response generated with context")
                 return real_response
         
-        # Only fallback to defaults if real AI fails
-        logger.info(f"⚡ Real AI unavailable, using context-aware fallback")
+        # Intelligent fallback using analysis
+        logger.info(f"⚡ Using intelligent context-aware fallback")
         return None
 
+    def generate_smart_response(self, message, analysis):
+        """Generate intelligent response based on analysis"""
+        intents = analysis['intents']
+        entities = analysis['entities']
+        knowledge = analysis['knowledge_matches']
+        
+        # Use knowledge base if we have matches
+        if knowledge:
+            kb_info = knowledge[0]['information']
+            return f"""💡 **{knowledge[0]['topic'].replace('_', ' ').title()}**\n\n{kb_info}\n\n{'**Related to:** ' + ', '.join(entities['languages']) if entities['languages'] else ''}\n\nWould you like me to explain more details or provide code examples?"""
+        
+        # Intent-based responses
+        if "coding" in intents:
+            langs = entities['languages']
+            lang_str = f" in {', '.join(langs)}" if langs else ""
+            return f"""💻 **Code Assistance{lang_str}**\n\nI can help you with:\n• Writing and reviewing code\n• Debugging and optimization\n• Best practices and patterns\n• Algorithm implementation\n\nWhat specifically would you like help with?"""
+        
+        if "math" in intents:
+            numbers = entities['numbers']
+            num_str = f" with numbers {', '.join(numbers)}" if numbers else ""
+            return f"""🔢 **Mathematical Assistance{num_str}**\n\nI can solve:\n• Algebraic equations\n• Calculus problems\n• Statistics and probability\n• Linear algebra\n\nPlease share the complete problem and I'll solve it step-by-step!"""
+        
+        if "explanation" in intents:
+            topics = entities['topics']
+            topic_str = f" about {', '.join(topics)}" if topics else ""
+            return f"""📚 **Explanation Mode{topic_str}**\n\nI'll break this down clearly:\n• Fundamental concepts\n• Practical examples\n• Real-world applications\n• Further resources\n\nWhat specifically would you like me to explain?"""
+        
+        # General intelligent response
+        return f"""🧠 **Intelligent Response Mode**\n\nI understand you're asking about: {message[:100]}{'...' if len(message) > 100 else ''}\n\nBased on my analysis:\n• Intent: {', '.join(intents)}\n{f"• Languages: {', '.join(entities['languages'])}" if entities['languages'] else ''}\n{f"• Topics: {', '.join(entities['topics'])}" if entities['topics'] else ''}\n\nI'm ready to provide detailed assistance. Could you provide more specifics so I can give you the best answer?"""
+
     def process_message(self, message, conversation_history=None):
-        """Process incoming message with smart, context-aware responses"""
+        """Process incoming message with ENHANCED intelligence"""
         try:
             # Add to history
             if conversation_history is None:
@@ -483,47 +658,51 @@ class ChronexAIPython:
                 "timestamp": datetime.now().isoformat()
             })
 
-            # Build conversation context for AI
+            # DEEP MESSAGE ANALYSIS
+            analysis = self.analyze_message(message)
+            logger.info(f"📊 Analysis: Intents={analysis['intents']}, Entities={analysis['entities']}")
+
+            # Build rich conversation context
             recent_context = "\n".join([
                 f"{msg.get('role', 'user')}: {msg.get('content', '')}"
-                for msg in conversation_history[-5:]  # Last 5 messages for context
+                for msg in conversation_history[-5:]
             ])
 
-            # Try real AI first with full conversation context
-            context = f"Full conversation:\n{recent_context}"
-            real_response = self.get_ai_response(message, context)
+            # Try real AI first with ENHANCED context
+            context = f"""You are Chronex AI, an advanced intelligent assistant created by DEMON ALEX.
+Be helpful, accurate, and conversational.
+
+Recent conversation:
+{recent_context}
+
+Analysis:
+- User Intent: {', '.join(analysis['intents'])}
+- Complexity: {analysis['complexity']}
+- Entities: {analysis['entities']}"""
+
+            real_response = self.get_ai_response(message, context, analysis)
             
             if real_response:
                 response = real_response
             else:
-                # Smart fallback: Provide helpful general response
-                response = f"""💡 I'm Chronex AI, your intelligent assistant!
-
-I can help with:
-• Answering questions and explaining concepts
-• Code analysis and programming help
-• Mathematical problem solving
-• Data science and analytics
-• Web development assistance
-• General conversation and advice
-
-**Your message:** "{message[:50]}{'...' if len(message) > 50 else ''}"
-
-Please keep the conversation going! I'm here to help with any topic you'd like to discuss."""
+                # Use intelligent fallback with analysis
+                response = self.generate_smart_response(message, analysis)
 
             # Add AI response to history
             conversation_history.append({
                 "role": "assistant",
                 "content": response,
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
+                "analysis": analysis
             })
 
             return {
                 "success": True,
                 "response": response,
-                "model": self.config["model"]["name"],
+                "model": self.config["model"]["name"] + " (Enhanced)",
                 "history": conversation_history,
-                "ai_powered": real_response is not None
+                "ai_powered": real_response is not None,
+                "analysis": analysis
             }
 
         except Exception as e:
@@ -963,69 +1142,6 @@ I've got you covered with image capabilities!
 Ready to scan? Upload an image! 🚀📸""",
         ]
         return def_random(image_responses)
-
-    def process_message(self, message, conversation_history=None):
-        """Process incoming message"""
-        try:
-            message_type = self.detect_message_type(message)
-            
-            # Add to history
-            if conversation_history is None:
-                conversation_history = []
-            
-            conversation_history.append({
-                "role": "user",
-                "content": message,
-                "timestamp": datetime.now().isoformat()
-            })
-
-            # Try real AI first for any message
-            context = f"Message type: {message_type}. Conversation history: {len(conversation_history)} messages"
-            real_response = self.get_ai_response(message, context)
-            
-            if real_response:
-                response = real_response
-            else:
-                # Fallback to categorized responses
-                if message_type == "status":
-                    response = self.check_status(message)
-                elif message_type == "creator":
-                    response = self.handle_creator_query(message)
-                elif message_type == "code":
-                    response = self.analyze_code(message)
-                elif message_type == "math":
-                    response = self.solve_math(message)
-                elif message_type == "image":
-                    response = self.handle_image_query(message)
-                elif message_type == "question":
-                    response = self.answer_question(message)
-                elif message_type == "greeting":
-                    response = self.handle_greeting(message)
-                else:
-                    response = self.generate_general_response(message)
-
-            # Add AI response to history
-            conversation_history.append({
-                "role": "assistant",
-                "content": response,
-                "timestamp": datetime.now().isoformat()
-            })
-
-            return {
-                "success": True,
-                "response": response,
-                "type": message_type,
-                "model": self.config["model"]["name"],
-                "history": conversation_history
-            }
-
-        except Exception as e:
-            logger.error(f"Error processing message: {str(e)}")
-            return {
-                "success": False,
-                "error": str(e),
-                "response": "⚠️ An error occurred while processing your message."
-            }
 
 # Initialize AI
 chronex_python = ChronexAIPython(CHRONEX_CONFIG)

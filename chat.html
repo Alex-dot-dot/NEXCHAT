@@ -32,7 +32,7 @@
         </div>
         <!-- Active chat contact info (shows when in chat) -->
         <div id="activeChatHeader" class="active-chat-header" style="display: none;">
-          <img id="activeChatAvatar" src="" alt="Contact" class="active-chat-avatar">
+          <img id="activeChatAvatar" src="" alt="Contact" class="active-chat-avatar" style="cursor: pointer;">
           <div class="active-chat-info">
             <div id="activeChatName" class="active-chat-name">Contact Name</div>
             <div id="activeChatStatus" class="active-chat-status">Online</div>
@@ -47,8 +47,7 @@
       </div>
       <div class="header-right-scroll">
         <div class="header-right">
-          <button id="profile-sticker" class="header-icon-btn profile-sticker" title="Profile"
-            onclick="window.location.href='profile-upload.html'">👤</button>
+          <button id="profile-sticker" class="header-icon-btn profile-sticker" title="Profile">👤</button>
 
           <!-- Dark Mode Sliding Toggle Switch -->
           <div class="toggle-switch-container" title="Dark/Light Mode">
@@ -110,8 +109,29 @@
         <h3>📢 Announcements</h3>
       </div>
       <div id="announcementsFeed" class="announcements-feed">
+        <!-- WELCOME ANNOUNCEMENT BLOCK -->
+        <div class="announcement-item pinned-announcement"
+          style="border: 2px solid #00ff66; background: rgba(0, 255, 102, 0.05);">
+          <div class="announcement-header">
+            <h4 class="announcement-title">WELCOME TO NEXCHAT</h4>
+            <span class="announcement-badge" style="background: #00ff66; color: #000;">📢 NEX-DEV</span>
+          </div>
+          <p class="announcement-content" style="font-weight: 600; color: #fff;">
+            WELCOME TO NEXCHAT THE FUTURE IS INIT I AM DEMON ALEX NEX DEVELOPER....
+          </p>
+          <p class="announcement-content">
+            WE ARE BRINGING YOU NEX_REELS SIMILAR TO TIKTOK/SNAPCHAT BUT IT WILL BE ON NEXCHAT BY NOVEMBER
+            23RD...
+            IF YOU HAVE ANY COMPLAINT KINDLY GO TO NEX SETTINGS AND FILE THEM
+          </p>
+          <div class="announcement-footer">
+            <span class="announcement-time">IMPORTANT Update</span>
+            <span class="announcement-admin">BEST REGARDS: DEMON ALEX {LINUX-DEVELOPER}</span>
+          </div>
+        </div>
+
         <div class="announcements-empty-state">
-          <p>No announcements yet</p>
+          <p>No other announcements yet</p>
           <p class="hint">Stay tuned for updates from NEXCHAT</p>
         </div>
       </div>
@@ -232,10 +252,13 @@
             <input type="file" id="file-input" style="display: none;" accept="image/*,video/*,.pdf,.doc,.docx" />
             <input type="text" id="message-input" class="message-input" placeholder="Say something..."
               autocomplete="off" maxlength="1000" />
-            <button type="button" id="emoji-btn" class="input-btn">😊</button>
+            <!-- <button type="button" id="emoji-btn" class="input-btn">😊</button> -->
             <button type="button" id="poll-btn" class="input-btn" title="Create Poll" style="display: none;">📊</button>
             <button type="button" id="audio-record-btn" class="input-btn" title="Record audio">🎤</button>
-            <button type="button" id="sticker-btn" class="sticker-btn" title="Post Status">✨</button>
+            <!-- <button type="button" id="sticker-btn" class="sticker-btn" title="Post Status">✨</button> -->
+            <button type="button" id="vision-tester-btn" class="input-btn" title="Image Vision Tester"
+              onclick="window.location.href='image-vision-tester.html'"
+              style="background: linear-gradient(135deg, #00ff66, #00d4ff); color: #000; font-weight: 700;">🖼️</button>
             <button type="button" id="audio-send-btn" class="audio-send-btn" title="Send audio">›</button>
             <button type="submit" class="send-btn">✓</button>
           </form>
@@ -243,11 +266,15 @@
           <!-- Audio Recording UI -->
           <div id="audioRecordingUI" class="audio-recording-ui" style="display: none;">
             <div class="audio-record-controls">
-              <button type="button" id="audioStopBtn" class="audio-control-btn stop-btn" title="Stop recording">⏹️ Stop</button>
+              <button type="button" id="audioStopBtn" class="audio-control-btn stop-btn" title="Stop recording">⏹️
+                Stop</button>
               <div class="audio-timer">
                 <span id="audioTimer">0:00</span>
               </div>
-              <button type="button" id="audioCancelBtn" class="audio-control-btn cancel-btn" title="Cancel">❌ Cancel</button>
+              <button type="button" id="audioSendNowBtn" class="audio-control-btn send-btn" title="Send now"
+                style="background: #00ff66; color: #000; margin-left: 5px;">➤ Send</button>
+              <button type="button" id="audioCancelBtn" class="audio-control-btn cancel-btn" title="Cancel">❌
+                Cancel</button>
             </div>
           </div>
 
@@ -398,6 +425,69 @@
             </div>
           </div>
 
+          <!-- Mute/Block/Delete Actions -->
+          <div class="info-section">
+            <div class="section-item" id="muteUserItem" style="cursor: pointer;">
+              <span class="section-icon">🔇</span>
+              <div class="section-content" style="flex: 1;">
+                <div class="section-label">Mute User</div>
+              </div>
+              <div class="toggle-switch-small"
+                style="position: relative; display: inline-block; width: 40px; height: 24px;">
+                <input type="checkbox" id="muteUserToggle" style="opacity: 0; width: 0; height: 0;">
+                <span class="slider round"
+                  style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 34px; border: 1px solid #555;"></span>
+                <style>
+                  #muteUserToggle:checked+.slider {
+                    background-color: #00ff66;
+                    border-color: #00ff66;
+                  }
+
+                  #muteUserToggle:checked+.slider:before {
+                    transform: translateX(16px);
+                    background-color: #000;
+                  }
+
+                  .slider:before {
+                    position: absolute;
+                    content: "";
+                    height: 16px;
+                    width: 16px;
+                    left: 3px;
+                    bottom: 3px;
+                    background-color: #888;
+                    transition: .4s;
+                    border-radius: 50%;
+                  }
+                </style>
+              </div>
+            </div>
+          </div>
+
+          <div class="info-section">
+            <div class="section-item" id="infoBlockBtn" style="cursor: pointer; color: #ff4d4d;">
+              <span class="section-icon" style="color: #ff4d4d;">🚫</span>
+              <div class="section-content">
+                <div class="section-label">Block User</div>
+              </div>
+            </div>
+            <div class="section-item" id="infoUnblockBtn" style="cursor: pointer; color: #00ff66; display: none;">
+              <span class="section-icon" style="color: #00ff66;">✅</span>
+              <div class="section-content">
+                <div class="section-label">Unblock User</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="info-section">
+            <div class="section-item" id="infoDeleteBtn" style="cursor: pointer; color: #ff4d4d;">
+              <span class="section-icon" style="color: #ff4d4d;">🗑️</span>
+              <div class="section-content">
+                <div class="section-label">Delete User</div>
+              </div>
+            </div>
+          </div>
+
           <!-- Members Section (for groups) -->
           <div class="info-section" id="membersList" style="display: none;">
             <div class="section-title">Members</div>
@@ -408,7 +498,7 @@
         </div>
       </div>
 
-      <!-- STATUS VIEWER MODAL -->
+      <!-- STATUS VIEWER MODAL (Used for Profile Pics too) -->
       <div id="statusViewerModal" class="modal" style="display: none;">
         <div class="status-viewer-content">
           <button id="closeStatusViewerBtn" class="close-btn"
@@ -429,6 +519,23 @@
         </div>
       </div>
 
+      <!-- NEW PROFILE PIC MODAL -->
+      <div id="profilePicModal" class="modal"
+        style="display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.95);">
+        <div style="position: relative; max-width: 90%; max-height: 90%;">
+          <button id="closeProfileModal"
+            style="position: absolute; top: -40px; right: 0; background: none; border: none; color: white; font-size: 30px; cursor: pointer;">✕</button>
+          <img id="profileModalImg" src=""
+            style="max-width: 100%; max-height: 80vh; border: 2px solid #00ff66; box-shadow: 0 0 50px rgba(0, 255, 102, 0.2); border-radius: 8px;">
+          <h3 id="profileModalName"
+            style="color:white; text-align:center; margin-top: 15px; font-family: 'Rajdhani', sans-serif; letter-spacing: 2px;">
+            USER</h3>
+          <button id="editProfileBtnModal"
+            style="display:none; margin: 10px auto; display: block; background: #00ff66; color: #000; padding: 10px 20px; border: none; font-weight: bold; cursor: pointer; border-radius: 5px;">EDIT
+            AVATAR</button>
+        </div>
+      </div>
+
       <!-- OFFLINE INDICATOR -->
       <div id="offlineIndicator" class="offline-indicator" style="display: none;">
         <span class="offline-icon">📵</span>
@@ -444,6 +551,23 @@
             onclick="document.getElementById('createGroupModal').style.display='none'">&times;</span>
           <h2>👥 Create Group</h2>
           <form id="createGroupForm">
+            <div class="form-group" style="text-align: center; margin-bottom: 20px;">
+              <label>Group Icon</label>
+              <div style="position: relative; width: 80px; height: 80px; margin: 0 auto;">
+                <img id="groupIconPreview" src="assets/default_group.png"
+                  onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMDBmZjY2IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PGNpcmNsZSBjeD0iOS41IiBjeT0iNyIgcj0iNCIvPjxwYXRoIGQ9Ik0zIDIxdi0yYTQgNCAwIDAgMSA0LTRoNWE0IDQgMCAwIDEgNCA0djIiLz48cGF0aCBkPSJNMTYgMy4xM2E0IDQgMCAwIDEgMCA3Ljc1Ii8+PHBhdGggZD0iTTIxIDIxdi0yYTQgNCAwIDAgMC0zLTMuODUiLz48L3N2Zz4='"
+                  style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid #00ff66;">
+                <div onclick="document.getElementById('groupIconInput').click()"
+                  style="position: absolute; bottom: 0; right: 0; background: #00ff66; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid #000;">
+                  <span style="color: #000; font-size: 14px; font-weight: bold;">+</span>
+                </div>
+              </div>
+              <input type="file" id="groupIconInput" accept="image/*" style="display: none;"
+                onchange="const file=this.files[0];if(file){const reader=new FileReader();reader.onload=e=>document.getElementById('groupIconPreview').src=e.target.result;reader.readAsDataURL(file);}">
+              <button type="button" id="generateGroupAvatarBtn"
+                style="margin-top: 10px; background: transparent; border: 1px solid #00ff66; color: #00ff66; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">🎲
+                Generate NEX Avatar</button>
+            </div>
             <div class="form-group">
               <label>Group Name</label>
               <input type="text" id="groupName" placeholder="Group name..." maxlength="50" required>
@@ -469,6 +593,42 @@
             <div id="groupCreateResult"
               style="margin-top: 15px; padding: 10px; border-radius: 6px; text-align: center; display: none;"></div>
           </form>
+        </div>
+      </div>
+
+      <!-- GROUP INFO MODAL -->
+      <div id="groupInfoModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px;">
+          <span class="close-modal"
+            onclick="document.getElementById('groupInfoModal').style.display='none'">&times;</span>
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img id="infoGroupIcon" src=""
+              style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid #00ff66; margin-bottom: 10px;">
+            <h2 id="infoGroupName" style="margin: 0; color: #00ff66;">Group Name</h2>
+            <p id="infoGroupDesc" style="color: #aaa; font-size: 14px; margin-top: 5px;">Description</p>
+          </div>
+
+          <div class="settings-section">
+            <h3>👥 Members (<span id="infoMemberCount">0</span>)</h3>
+            <div id="infoMembersList" style="max-height: 250px; overflow-y: auto; margin-top: 10px;">
+              <!-- Members will be populated here -->
+            </div>
+          </div>
+
+          <div class="settings-section" id="adminActionsSection" style="display: none;">
+            <h3>🛡️ Admin Actions</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <button id="addMemberBtn" class="btn-secondary">➕ Add Member</button>
+              <!-- Delete Group Button (only for admin) -->
+              <button id="deleteGroupBtn"
+                style="background: #ff4d4d; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold;">🗑️
+                Delete Group</button>
+            </div>
+          </div>
+
+          <button id="leaveGroupBtn"
+            style="width: 100%; margin-top: 20px; background: #333; color: #ff4d4d; border: 1px solid #ff4d4d; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold;">🚪
+            Leave Group</button>
         </div>
       </div>
 
@@ -534,7 +694,8 @@
               <h3>✏️ Text Element Adjustment</h3>
               <div class="setting-item">
                 <label for="fontFamilySelect"><strong>Font Family</strong></label>
-                <select id="fontFamilySelect" style="width: 100%; padding: 8px; background: #2a2a2a; border: 1px solid #00ff66; border-radius: 6px; color: #00ff66; margin-top: 6px;">
+                <select id="fontFamilySelect"
+                  style="width: 100%; padding: 8px; background: #2a2a2a; border: 1px solid #00ff66; border-radius: 6px; color: #00ff66; margin-top: 6px;">
                   <option value="Arial, sans-serif">Arial</option>
                   <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Segoe UI</option>
                   <option value="'Courier New', monospace">Courier New</option>
@@ -543,19 +704,25 @@
                 </select>
               </div>
               <div class="setting-item">
-                <label for="letterSpacingRange"><strong>Letter Spacing: <span id="letterSpacingValue">0</span>px</strong></label>
-                <input type="range" id="letterSpacingRange" min="-2" max="5" value="0" step="0.5" style="width: 100%; margin-top: 6px;">
+                <label for="letterSpacingRange"><strong>Letter Spacing: <span
+                      id="letterSpacingValue">0</span>px</strong></label>
+                <input type="range" id="letterSpacingRange" min="-2" max="5" value="0" step="0.5"
+                  style="width: 100%; margin-top: 6px;">
               </div>
               <div class="setting-item">
                 <label for="lineHeightRange"><strong>Line Height: <span id="lineHeightValue">1.5</span></strong></label>
-                <input type="range" id="lineHeightRange" min="1" max="2.5" value="1.5" step="0.1" style="width: 100%; margin-top: 6px;">
+                <input type="range" id="lineHeightRange" min="1" max="2.5" value="1.5" step="0.1"
+                  style="width: 100%; margin-top: 6px;">
               </div>
               <div class="setting-item">
                 <label><strong>Text Alignment</strong></label>
                 <div style="display: flex; gap: 8px; margin-top: 8px;">
-                  <button id="alignLeft" class="text-align-btn" style="flex: 1; padding: 8px; background: #00ff66; color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">Left</button>
-                  <button id="alignCenter" class="text-align-btn" style="flex: 1; padding: 8px; background: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">Center</button>
-                  <button id="alignRight" class="text-align-btn" style="flex: 1; padding: 8px; background: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">Right</button>
+                  <button id="alignLeft" class="text-align-btn"
+                    style="flex: 1; padding: 8px; background: #00ff66; color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">Left</button>
+                  <button id="alignCenter" class="text-align-btn"
+                    style="flex: 1; padding: 8px; background: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">Center</button>
+                  <button id="alignRight" class="text-align-btn"
+                    style="flex: 1; padding: 8px; background: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">Right</button>
                 </div>
               </div>
             </div>
@@ -589,7 +756,7 @@
             </div>
 
             <div class="settings-section">
-              <h3>�️ Background Image</h3>
+              <h3>️ Background Image</h3>
               <div class="setting-item">
                 <label><strong>Change Chat Background</strong></label>
                 <input type="file" id="backgroundImageInput" accept="image/*"
@@ -615,7 +782,21 @@
               <button id="uploadChatBackgroundBtn" class="settings-action-btn"
                 style="background: #00d4ff; color: #000; width: 100%;">🎨 Set Chat Background</button>
               <button id="removeChatBackgroundBtn" class="settings-action-btn"
-                style="background: #ff9900; color: #000; width: 100%; margin-top: 8px;">🗑️ Remove Chat Background</button>
+                style="background: #ff9900; color: #000; width: 100%; margin-top: 8px;">🗑️ Remove Chat
+                Background</button>
+            </div>
+
+            <div class="settings-section">
+              <h3>Support & Feedback</h3>
+              <div class="setting-item" style="flex-direction: column; align-items: flex-start;">
+                <p style="color: #888; font-size: 12px; margin-bottom: 10px;">If you have any complaints or feedback,
+                  kindly let us know.</p>
+                <button id="fileComplaintBtn" class="settings-action-btn"
+                  style="background: linear-gradient(135deg, #ff416c, #ff4b2b); color: #fff; width: 100%; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px;"
+                  onclick="const subject=encodeURIComponent('NEXCHAT Complaint - User ID: ' + (window.myUID || 'Unknown')); window.location.href='mailto:nexchat23@gmail.com?subject=' + subject;">
+                  📩 FILE A COMPLAINT TO NEX_DEV
+                </button>
+              </div>
             </div>
 
             <div class="settings-section">
@@ -634,23 +815,29 @@
 
             <div class="settings-section">
               <h3>💳 Transfer Tokens</h3>
-              <div class="setting-item" style="flex-direction: column; align-items: flex-start; border: none; padding: 0;">
-                <div style="width: 100%; background: rgba(0, 255, 102, 0.1); border: 1px solid #00ff66; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
-                  <p style="color: #888; margin: 0 0 4px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Your Balance</p>
+              <div class="setting-item"
+                style="flex-direction: column; align-items: flex-start; border: none; padding: 0;">
+                <div
+                  style="width: 100%; background: rgba(0, 255, 102, 0.1); border: 1px solid #00ff66; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+                  <p
+                    style="color: #888; margin: 0 0 4px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
+                    Your Balance</p>
                   <p style="color: #00ff66; margin: 0; font-size: 20px; font-weight: 700;">
                     <span id="currentTokenBalance">0</span>
                     <span style="font-size: 14px; opacity: 0.8;">⭐ Tokens</span>
                   </p>
                 </div>
               </div>
-              <div class="setting-item" style="flex-direction: column; align-items: flex-start; border: none; padding: 0;">
+              <div class="setting-item"
+                style="flex-direction: column; align-items: flex-start; border: none; padding: 0;">
                 <label style="font-size: 13px; margin-bottom: 8px;"><strong>Recipient UID:</strong></label>
                 <input type="text" id="recipientUID" placeholder="Paste recipient's UID here..."
-                  style="width: 100%; padding: 11px 12px; background: #2a2a2a; border: 1px solid #00ff66; border-radius: 8px; color: #00ff66; font-size: 12px; transition: all 0.2s ease;" 
+                  style="width: 100%; padding: 11px 12px; background: #2a2a2a; border: 1px solid #00ff66; border-radius: 8px; color: #00ff66; font-size: 12px; transition: all 0.2s ease;"
                   onfocus="this.style.borderColor='#00ff66'; this.style.boxShadow='0 0 12px rgba(0, 255, 102, 0.3)';"
                   onblur="this.style.boxShadow='none';">
               </div>
-              <div class="setting-item" style="flex-direction: column; align-items: flex-start; border: none; padding: 0; margin-top: 12px;">
+              <div class="setting-item"
+                style="flex-direction: column; align-items: flex-start; border: none; padding: 0; margin-top: 12px;">
                 <label style="font-size: 13px; margin-bottom: 8px;"><strong>Amount:</strong></label>
                 <input type="number" id="transferAmount" placeholder="Enter amount..." min="1" max="99999"
                   style="width: 100%; padding: 11px 12px; background: #2a2a2a; border: 1px solid #00ff66; border-radius: 8px; color: #00ff66; font-size: 12px; transition: all 0.2s ease;"
@@ -658,7 +845,8 @@
                   onblur="this.style.boxShadow='none';">
               </div>
               <button id="transferTokensBtn" class="settings-action-btn"
-                style="background: linear-gradient(135deg, #00ff66, #00dd55); color: #000; width: 100%; margin-top: 12px; font-weight: 700;">🚀 Send Tokens</button>
+                style="background: linear-gradient(135deg, #00ff66, #00dd55); color: #000; width: 100%; margin-top: 12px; font-weight: 700;">🚀
+                Send Tokens</button>
               <div id="transferResult"></div>
             </div>
 
@@ -681,8 +869,10 @@
       <button id="nav-status" class="nav-item" data-nav="updates" title="View Statuses">✨</button>
       <button id="nav-groups" class="nav-item" data-nav="communities" title="Groups">👥</button>
       <button id="nav-announcements" class="nav-item" data-nav="announcements" title="Announcements">📢</button>
-      <button id="nav-marketplace" class="nav-item" data-nav="marketplace" title="Marketplace" onclick="window.location.href='advertisement.html'">🛍️</button>
-      <button id="nav-games" class="nav-item" data-nav="games" title="Gaming Hub" onclick="window.location.href='gaminghub.html'">🎮</button>
+      <button id="nav-marketplace" class="nav-item" data-nav="marketplace" title="Marketplace"
+        onclick="window.location.href='advertisement.html'">🛍️</button>
+      <button id="nav-games" class="nav-item" data-nav="games" title="Gaming Hub"
+        onclick="window.location.href='gaminghub.html'">🎮</button>
       <button id="logout-btn" class="nav-item logout" title="Logout">🚪</button>
     </nav>
   </div>
@@ -693,6 +883,7 @@
   <script src="pwa-install.js"></script>
   <script src="app-prompt.js"></script>
   <script src="messaging-features.js"></script>
+  <script src="chat-navigation.js"></script>
   <script type="module" src="chat.js"></script>
   <script src="button-setup.js"></script>
   <style>
@@ -798,167 +989,23 @@
     }
 
     .dark-label {
-      left: 6px;
+      right: 8px;
+      color: #00ff66;
       opacity: 1;
     }
 
-    .toggle-switch.active .dark-label {
-      opacity: 0.3;
+    .light-label {
+      left: 8px;
+      color: #ffaa00;
+      opacity: 0;
     }
 
-    .light-label {
-      right: 6px;
-      opacity: 0.3;
+    .toggle-switch.active .dark-label {
+      opacity: 0;
     }
 
     .toggle-switch.active .light-label {
       opacity: 1;
-    }
-
-    @media (max-width: 768px) {
-      .toggle-switch {
-        width: 55px;
-        height: 28px;
-      }
-
-      .toggle-slider {
-        width: 24px;
-        height: 24px;
-      }
-
-      .toggle-switch.active .toggle-slider {
-        left: 29px;
-      }
-
-      .toggle-label {
-        font-size: 12px;
-      }
-    }
-
-    /* 3-Dot Menu Button Styles */
-    .three-dots-menu {
-      background: transparent;
-      border: 2px solid #00ff66;
-      color: #00ff66;
-      font-size: 20px;
-      cursor: pointer;
-      padding: 6px 10px;
-      border-radius: 8px;
-      transition: all 0.3s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      letter-spacing: 3px;
-      font-weight: bold;
-    }
-
-    .three-dots-menu:hover {
-      background: rgba(0, 255, 102, 0.1);
-      box-shadow: 0 0 10px rgba(0, 255, 102, 0.3);
-      transform: scale(1.05);
-    }
-
-    .three-dots-menu:active {
-      transform: scale(0.95);
-    }
-
-    /* Chat Options Dropdown Menu */
-    .chat-options-dropdown {
-      position: fixed;
-      background: linear-gradient(135deg, rgba(20, 20, 30, 0.98) 0%, rgba(30, 30, 40, 0.98) 100%);
-      border: 2px solid #00ff66;
-      border-radius: 12px;
-      min-width: 200px;
-      box-shadow: 0 10px 40px rgba(0, 255, 102, 0.2), 0 0 20px rgba(0, 255, 102, 0.1);
-      z-index: 2000;
-      padding: 8px 0;
-      backdrop-filter: blur(10px);
-      animation: dropdownSlideDown 0.3s ease-out;
-    }
-
-    @keyframes dropdownSlideDown {
-      from {
-        opacity: 0;
-        transform: translateY(-10px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .dropdown-header {
-      padding: 10px 16px;
-      color: #00ff66;
-      font-size: 12px;
-      font-weight: bold;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      border-bottom: 1px solid rgba(0, 255, 102, 0.2);
-    }
-
-    .option-item {
-      width: 100%;
-      padding: 12px 16px;
-      background: transparent;
-      border: none;
-      color: #00ff66;
-      text-align: left;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
-      transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-family: inherit;
-    }
-
-    .option-item:hover {
-      background: rgba(0, 255, 102, 0.1);
-      padding-left: 20px;
-      text-shadow: 0 0 10px rgba(0, 255, 102, 0.4);
-    }
-
-    .option-item.danger {
-      color: #ff6b6b;
-    }
-
-    .option-item.danger:hover {
-      background: rgba(255, 107, 107, 0.1);
-      text-shadow: 0 0 10px rgba(255, 107, 107, 0.4);
-    }
-
-    .call-option::before {
-      content: '';
-      display: inline-block;
-      width: 4px;
-      height: 4px;
-      background: #00ff66;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .video-option::before {
-      content: '';
-      display: inline-block;
-      width: 4px;
-      height: 4px;
-      background: #00ff66;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .dropdown-divider {
-      height: 1px;
-      background: rgba(0, 255, 102, 0.2);
-      margin: 6px 0;
-    }
-
-    /* Adjust chat detail header for menu positioning */
-    .chat-detail-header {
-      position: relative;
     }
   </style>
 </body>

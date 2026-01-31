@@ -37,7 +37,9 @@ let currentChatType = 'direct'; // 'direct' or 'group'
 let myUID = null;
 let myUsername = null;
 let myProfilePic = null;
+let tokens = 0;
 let messageListener = null;
+let messageListener2 = null;
 let contactsListener = null;
 let callActive = false;
 let callStartTime = null;
@@ -46,9 +48,9 @@ let mentionPopupOpen = false;
 let groupMembers = [];
 
 const notificationSounds = {
-  success: 'data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQIAAAAAAA==',
-  error: 'data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQIAAAAAAA==',
-  info: 'data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAAB9AAACABAAZGF0YQIAAAAAAA=='
+  success: 'assets/notification.mp3', // Using standard notification sound
+  error: 'assets/error.mp3',
+  info: 'assets/pop.mp3'
 };
 
 let basicUIInitialized = false;
@@ -170,34 +172,48 @@ function showNotif(msg, type = "info", duration = 3000) {
 // Play notification sound
 function playNotificationSound(type = "info") {
   try {
-    // Create a simple beep sound using Web Audio API
+    const soundPath = notificationSounds[type] || notificationSounds.info;
+    const audio = new Audio(soundPath);
+
+    // Attempt to play the sound file
+    const playPromise = audio.play();
+
+    if (playPromise !== undefined) {
+      playPromise.catch(error => {
+        console.warn("Audio play failed, falling back to beep:", error);
+        // Fallback to oscillator if file fails
+        playBeep(type);
+      });
+    }
+  } catch (err) {
+    console.warn("Could not play notification sound:", err);
+    playBeep(type);
+  }
+}
+
+// Fallback beep function
+function playBeep(type) {
+  try {
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
-    const frequencies = {
-      success: 800,
-      error: 300,
-      info: 500
-    };
-
-    const frequency = frequencies[type] || 500;
-    const duration = 0.2;
-
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
 
     oscillator.connect(gainNode);
     gainNode.connect(audioContext.destination);
 
-    oscillator.frequency.value = frequency;
-    oscillator.type = 'sine';
+    // Different frequencies for different types
+    if (type === 'error') oscillator.frequency.value = 300;
+    else if (type === 'success') oscillator.frequency.value = 800;
+    else oscillator.frequency.value = 500;
 
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+    oscillator.type = 'sine';
+    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
 
     oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + duration);
-  } catch (err) {
-    console.warn("Could not play notification sound:", err);
+    oscillator.stop(audioContext.currentTime + 0.2);
+  } catch (e) {
+    console.error("Audio context not supported", e);
   }
 }
 
@@ -358,6 +374,41 @@ async function showUserInfoPanel(userId) {
     // Hide members list for direct chats with null check
     const membersListEl = document.getElementById('membersList');
     if (membersListEl) membersListEl.style.display = 'none';
+
+    // Check Block/Mute status
+    if (typeof myUID !== 'undefined' && myUID) {
+      try {
+        const myDoc = await getDoc(doc(db, 'users', myUID));
+        if (myDoc.exists()) {
+          const myData = myDoc.data();
+          const blockedUsers = myData.blockedUsers || [];
+          const mutedUsers = myData.mutedUsers || [];
+
+          const isBlocked = blockedUsers.includes(userId);
+          const isMuted = mutedUsers.includes(userId);
+
+          const blockBtn = document.getElementById('infoBlockBtn');
+          const unblockBtn = document.getElementById('infoUnblockBtn');
+          const muteToggle = document.getElementById('muteUserToggle');
+
+          if (blockBtn && unblockBtn) {
+            if (isBlocked) {
+              blockBtn.style.display = 'none';
+              unblockBtn.style.display = 'flex';
+            } else {
+              blockBtn.style.display = 'flex';
+              unblockBtn.style.display = 'none';
+            }
+          }
+
+          if (muteToggle) {
+            muteToggle.checked = isMuted;
+          }
+        }
+      } catch (e) {
+        console.error("Error checking user status:", e);
+      }
+    }
 
     // Show the panel
     const infoSidebarEl = document.getElementById('infoSidebar');
@@ -723,6 +774,9 @@ function showChatListView() {
   }
   // Hide chat profile display when returning to list view
   hideChatProfileDisplay();
+
+  // Restore user background when returning to list view
+  loadUserBackground();
 }
 
 function showChatDetailView() {
@@ -939,6 +993,17 @@ async function showChatContextMenu(event, chatId) {
     menu.remove();
   };
   menu.appendChild(muteBtn);
+
+  // GROUP INFO BUTTON
+  const isGroup = document.querySelector(`li[data-chat-id="${chatId}"] .group-avatar`) !== null;
+  if (isGroup) {
+    const infoBtn = createMenuBtn("ℹ️ Group Info", "#00d4ff", true);
+    infoBtn.onclick = () => {
+      showGroupInfoPanel(chatId);
+      menu.remove();
+    };
+    menu.appendChild(infoBtn);
+  }
 
   // ARCHIVE BUTTON
   const archiveBtn = createMenuBtn("📦 Archive", "#00ff66", true);
@@ -1215,7 +1280,7 @@ async function loadAllUsers() {
   try {
     console.log("🔥 Querying Firestore users collection...");
     const usersRef = collection(db, "users");
-    const q = query(usersRef);
+    const q = query(usersRef, limit(50));
     const snap = await getDocs(q);
 
     let allUsers = [];
@@ -1663,7 +1728,14 @@ function goBack() {
   document.getElementById("chatName").textContent = "Select a chat";
   document.getElementById("chatProfilePic").src = "";
   document.getElementById("statusText").textContent = "Offline";
-  if (messageListener) messageListener();
+  if (messageListener) {
+    messageListener();
+    messageListener = null;
+  }
+  if (messageListener2) {
+    messageListener2();
+    messageListener2 = null;
+  }
 }
 
 function initializeEmojiPicker() {
@@ -1906,41 +1978,17 @@ async function sendMessage(e) {
     return;
   }
 
-  // Check internet connection
-  if (!navigator.onLine) {
-    console.log("📵 User is offline - queueing message");
-    await storeOfflineMessage(currentChatUser, text, currentChatType, selectedFile?.name || null);
-
-    // Show optimistic UI
-    messageText.value = "";
-    selectedFile = null;
-    document.getElementById("attachment-preview").style.display = "none";
-    showNotif("📵 You're offline - message will send when online", "info", 3000);
-    hapticFeedback('light');
-    return;
-  }
+  hapticFeedback('light');
 
   try {
-    // Get current user's tokens
     const userRef = doc(db, "users", myUID);
-    const userDoc = await getDoc(userRef);
 
-    if (!userDoc.exists()) {
-      showNotif("❌ User profile not found", "error");
-      return;
-    }
-
-    const currentTokens = userDoc.data()?.tokens ?? 0;
-
-    // Check if user has at least 1 token
-    if (currentTokens < 1) {
+    // Use global tokens variable for immediate check (offline-friendly)
+    if (tokens < 1) {
       showNotif("❌ Insufficient tokens! You need at least 1 token to send a message. 💳", "error");
       return;
     }
 
-    hapticFeedback('light');
-
-    let newTokens = currentTokens - 1;
     let attachment = null;
 
     // Upload file if selected
@@ -1973,11 +2021,11 @@ async function sendMessage(e) {
 
         // Deduct 1 token
         await updateDoc(userRef, {
-          tokens: newTokens,
+          tokens: increment(-1),
           lastMessageSentAt: serverTimestamp()
         });
 
-        showNotif(`✓ AI response received(-1 token, ${newTokens} remaining)`, "success", 2000);
+        showNotif(`✓ AI response received (-1 token)`, "success", 2000);
       } catch (aiErr) {
         console.error("❌ Chronex AI error:", aiErr);
         displayChronexAIError("Sorry, I encountered an error processing your message. Please try again.");
@@ -2018,7 +2066,7 @@ async function sendMessage(e) {
 
       // Deduct 1 token
       await updateDoc(userRef, {
-        tokens: newTokens,
+        tokens: increment(-1),
         lastMessageSentAt: serverTimestamp()
       });
 
@@ -2028,7 +2076,7 @@ async function sendMessage(e) {
           userId: myUID,
           recipientId: currentChatUser,
           sentAt: new Date(),
-          messageLength: text.length,
+          messageLength: (text || "").length,
           hasAttachment: !!attachment,
           tokensCost: 1
         });
@@ -2037,22 +2085,18 @@ async function sendMessage(e) {
       }
     }
 
-    // Update token display
-    const tokenDisplay = document.getElementById("tokenCount");
-    if (tokenDisplay) {
-      tokenDisplay.textContent = newTokens;
-    }
-
-    // Clear reply preview after sending
+    // Clear UI state
     if (window.messagingFeatures && window.messagingFeatures.hideReplyPreview) {
       window.messagingFeatures.hideReplyPreview();
     }
 
-    messageText.value = "";
-    removeAttachment();
+    if (messageText) messageText.value = "";
+    if (typeof removeAttachment === 'function') removeAttachment();
+
     hapticFeedback('success');
-    showNotif(`✓ Message sent(-1 token, ${newTokens} remaining)`, "success", 2000);
-    document.getElementById("emoji-picker").style.display = "none";
+    showNotif(`✓ Message sent`, "success", 2000);
+    const emojiPicker = document.getElementById("emoji-picker");
+    if (emojiPicker) emojiPicker.style.display = "none";
     console.log("✅ Message sent successfully");
   } catch (err) {
     hapticFeedback('heavy');
@@ -2087,7 +2131,7 @@ function displayChronexAIResponse(response) {
   const messageEl = document.createElement("div");
   messageEl.className = "message ai-message";
   messageEl.innerHTML = `
-    <div class="message-avatar">🤖</div>
+    <img src="chronex-ai.jpg" class="message-avatar" alt="AI" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid #00ff66;">
     <div class="message-content">
       <p>${response.replace(/\n/g, '<br>')}</p>
     </div>
@@ -2105,7 +2149,7 @@ function displayChronexAIError(errorMessage) {
   const messageEl = document.createElement("div");
   messageEl.className = "message ai-message error-message";
   messageEl.innerHTML = `
-    <div class="message-avatar">⚠️</div>
+    <img src="chronex-ai.jpg" class="message-avatar" alt="AI" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid #ff4d4d;">
     <div class="message-content">
       <p>${escape(errorMessage)}</p>
     </div>
@@ -2125,7 +2169,15 @@ function loadMessages() {
   console.log("📨 Loading messages for chat with:", currentChatUser);
   console.log("📨 Current user UID:", myUID);
 
-  if (messageListener) messageListener();
+  // Unsubscribe from previous listeners to prevent memory leaks
+  if (messageListener) {
+    messageListener();
+    messageListener = null;
+  }
+  if (messageListener2) {
+    messageListener2();
+    messageListener2 = null;
+  }
 
   const messagesDiv = document.getElementById("messages-area");
   if (!messagesDiv) {
@@ -2138,7 +2190,7 @@ function loadMessages() {
     messagesDiv.innerHTML = `
       <div class="messages-list">
         <div class="empty-state">
-          <p>🤖 Welcome to Chronex AI!</p>
+          <p><img src="chronex-ai.jpg" style="width: 40px; height: 40px; border-radius: 50%; vertical-align: middle; margin-bottom: 10px; border: 2px solid #00ff66;"><br>Welcome to Chronex AI!</p>
           <p class="hint">I'm an advanced AI assistant. Ask me anything about coding, math, data analysis, and more!</p>
           <div style="margin-top: 20px; text-align: left; font-size: 12px; color: #888;">
             <p><strong>Capabilities:</strong></p>
@@ -2164,14 +2216,14 @@ function loadMessages() {
     collection(db, "messages"),
     where("from", "==", myUID),
     where("to", "==", currentChatUser),
-    limit(100)
+    limit(50) // Reduced limit for better performance
   );
 
   const q2 = query(
     collection(db, "messages"),
     where("from", "==", currentChatUser),
     where("to", "==", myUID),
-    limit(100)
+    limit(50) // Reduced limit for better performance
   );
 
   let messages1 = [];
@@ -2338,41 +2390,18 @@ function loadMessages() {
     updateMessages();
   }, (err) => {
     console.error("❌ Error loading outgoing messages:", err);
-    console.error("   Error Code:", err.code);
-    console.error("   Error Message:", err.message);
-
-    // Show error to user
-    if (err.code === 'permission-denied') {
-      showNotif("⚠️ Permission denied - check Firestore rules", "error", 3000);
-    } else if (err.code === 'failed-precondition') {
-      showNotif("📝 Creating database index... Try again in a moment", "info", 3000);
-    } else {
-      showNotif(`⚠️ Error: ${err.message} `, "error", 3000);
-    }
-
     loaded1 = true; // Mark as loaded even with error
     updateMessages();
   });
 
-  onSnapshot(q2, (snap) => {
+  // Assign second listener to messageListener2 to avoid leaks
+  messageListener2 = onSnapshot(q2, (snap) => {
     console.log("✅ Query 2 snapshot received:", snap.docs.length, "messages");
     messages2 = snap.docs.map(docSnap => ({ ...docSnap.data(), docId: docSnap.id }));
     loaded2 = true;
     updateMessages();
   }, (err) => {
     console.error("❌ Error loading incoming messages:", err);
-    console.error("   Error Code:", err.code);
-    console.error("   Error Message:", err.message);
-
-    // Show error to user
-    if (err.code === 'permission-denied') {
-      showNotif("⚠️ Permission denied - check Firestore rules", "error", 3000);
-    } else if (err.code === 'failed-precondition') {
-      showNotif("📝 Creating database index... Try again in a moment", "info", 3000);
-    } else {
-      showNotif(`⚠️ Error: ${err.message} `, "error", 3000);
-    }
-
     loaded2 = true; // Mark as loaded even with error
     updateMessages();
   });
@@ -2405,7 +2434,43 @@ function updateChatProfileDisplay(username, profilePic, status = 'Online') {
 
     if (activeChatName) activeChatName.textContent = username;
     if (activeChatStatus) activeChatStatus.textContent = status;
-    if (activeChatAvatar) activeChatAvatar.src = profilePic || "👤";
+    if (activeChatAvatar) {
+      activeChatAvatar.src = profilePic || "👤";
+
+      // AVATAR CLICK → Show Profile Picture Modal
+      activeChatAvatar.style.cursor = 'pointer';
+      activeChatAvatar.onclick = (e) => {
+        e.stopPropagation();
+        if (profilePic && (profilePic.startsWith('http') || profilePic.startsWith('data:'))) {
+          const modal = document.getElementById('profilePicModal');
+          const modalImg = document.getElementById('profileModalImg');
+          const modalName = document.getElementById('profileModalName');
+
+          if (modal && modalImg && modalName) {
+            modalImg.src = profilePic;
+            modalName.textContent = username;
+            modal.style.display = 'flex';
+
+            // Hide edit button (not their profile)
+            const editBtn = document.getElementById('editProfileBtnModal');
+            if (editBtn) editBtn.style.display = 'none';
+          }
+        }
+      };
+    }
+
+    // USERNAME CLICK → Open User Info Panel
+    if (activeChatName) {
+      activeChatName.style.cursor = 'pointer';
+      activeChatName.onclick = (e) => {
+        e.stopPropagation();
+        if (currentChatUser && currentChatType === 'direct') {
+          showUserInfoPanel(currentChatUser);
+        } else if (currentChatUser && currentChatType === 'group') {
+          showGroupInfoPanel(currentChatUser);
+        }
+      };
+    }
   }
 
   // Update message input area profile display
@@ -2419,7 +2484,43 @@ function updateChatProfileDisplay(username, profilePic, status = 'Online') {
 
     if (chatUserName) chatUserName.textContent = username;
     if (chatUserStatus) chatUserStatus.textContent = status;
-    if (chatUserAvatar) chatUserAvatar.src = profilePic || "👤";
+    if (chatUserAvatar) {
+      chatUserAvatar.src = profilePic || "👤";
+
+      // AVATAR CLICK → Show Profile Picture Modal (input area)
+      chatUserAvatar.style.cursor = 'pointer';
+      chatUserAvatar.onclick = (e) => {
+        e.stopPropagation();
+        if (profilePic && (profilePic.startsWith('http') || profilePic.startsWith('data:'))) {
+          const modal = document.getElementById('profilePicModal');
+          const modalImg = document.getElementById('profileModalImg');
+          const modalName = document.getElementById('profileModalName');
+
+          if (modal && modalImg && modalName) {
+            modalImg.src = profilePic;
+            modalName.textContent = username;
+            modal.style.display = 'flex';
+
+            // Hide edit button
+            const editBtn = document.getElementById('editProfileBtnModal');
+            if (editBtn) editBtn.style.display = 'none';
+          }
+        }
+      };
+    }
+
+    // USERNAME CLICK → Open User Info Panel (input area)
+    if (chatUserName) {
+      chatUserName.style.cursor = 'pointer';
+      chatUserName.onclick = (e) => {
+        e.stopPropagation();
+        if (currentChatUser && currentChatType === 'direct') {
+          showUserInfoPanel(currentChatUser);
+        } else if (currentChatUser && currentChatType === 'group') {
+          showGroupInfoPanel(currentChatUser);
+        }
+      };
+    }
   }
 }
 
@@ -2888,6 +2989,9 @@ function startCall(isVideo = false) {
 }
 
 function showCallUI(isVideo = false) {
+  // Get active chat avatar
+  const avatarSrc = document.getElementById('activeChatAvatar')?.src || '';
+
   // Create call overlay
   const callOverlay = document.createElement('div');
   callOverlay.id = 'call-overlay';
@@ -2897,17 +3001,18 @@ function showCallUI(isVideo = false) {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(0, 0, 0, 0.95);
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     z-index: 999;
     padding: 20px;
+    backdrop-filter: blur(10px);
     `;
 
   callOverlay.innerHTML = `
-      < div style = "text-align: center; color: #fff;" >
+      <div style="text-align: center; color: #fff; display: flex; flex-direction: column; align-items: center; width: 100%;">
         ${isVideo ? `
         <div id="video-container" style="
           width: 100%;
@@ -2920,26 +3025,59 @@ function showCallUI(isVideo = false) {
           display: flex;
           align-items: center;
           justify-content: center;
+          overflow: hidden;
+          position: relative;
         ">
-          <span style="color: #00ff66; font-size: 14px;">📹 Video stream active</span>
+          <!-- Show profile pic as placeholder/background for video -->
+          <img src="${avatarSrc}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.5; position: absolute;">
+          <span style="color: #00ff66; font-size: 14px; position: relative; z-index: 2; text-shadow: 0 0 4px #000;">📹 Video stream active</span>
         </div>
-      ` : ''
-    }
-      <h2 style="margin: 0 0 10px 0; color: #00ff66;">📞 ${isVideo ? 'Video' : 'Voice'} Call Active</h2>
-      <p id="call-duration" style="margin: 0 0 20px 0; font-size: 32px; color: #00ff66; font-weight: 700;">0:00</p>
-      <p style="margin: 0 0 20px 0; color: #aaa;">with ${currentChatUser}</p>
+      ` : `
+        <!-- Audio Call Profile Pic -->
+        <div style="
+          width: 120px; 
+          height: 120px; 
+          border-radius: 50%; 
+          border: 3px solid #00ff66; 
+          padding: 3px;
+          margin-bottom: 30px;
+          box-shadow: 0 0 30px rgba(0,255,102,0.3);
+          animation: pulse-ring 2s infinite;
+        ">
+          <img src="${avatarSrc}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+        </div>
+      `}
+      
+      <h2 style="margin: 0 0 10px 0; color: #00ff66; font-size: 24px;">${isVideo ? 'Video' : 'Voice'} Call Active</h2>
+      <p id="call-duration" style="margin: 0 0 10px 0; font-size: 42px; color: #fff; font-weight: 300; font-family: monospace;">0:00</p>
+      <p style="margin: 0 0 30px 0; color: #888; font-size: 16px;">with <span style="color: #00ff66; font-weight: bold;">${currentChatUser}</span></p>
+      
       <button id="end-call-btn" style="
-        padding: 12px 30px;
+        padding: 15px 40px;
         background: #ff4444;
         color: #fff;
         border: none;
-        border-radius: 8px;
-        font-size: 16px;
+        border-radius: 50px;
+        font-size: 18px;
         font-weight: 700;
         cursor: pointer;
         transition: all 0.2s;
-      ">🔴 End Call</button>
-    </div >
+        box-shadow: 0 4px 15px rgba(255, 68, 68, 0.4);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      ">
+        <span style="font-size: 24px;">📞</span> End Call
+      </button>
+      
+      <style>
+        @keyframes pulse-ring {
+          0% { box-shadow: 0 0 0 0 rgba(0, 255, 102, 0.4); }
+          70% { box-shadow: 0 0 0 20px rgba(0, 255, 102, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(0, 255, 102, 0); }
+        }
+      </style>
+    </div>
       `;
 
   document.body.appendChild(callOverlay);
@@ -2960,6 +3098,26 @@ function showCallUI(isVideo = false) {
   };
   document.addEventListener('keydown', handleEscape);
 }
+
+// Add listener for instant audio sending
+document.addEventListener('audioMessageReady', (e) => {
+  if (e.detail && e.detail.file) {
+    console.log("🎤 Audio message ready received in chat.js");
+    // Set the selected file
+    selectedFile = e.detail.file;
+
+    // Trigger submit on the form
+    const form = document.getElementById('message-form');
+    if (form) {
+      // Create and dispatch event
+      const submitEvent = new Event('submit', {
+        'bubbles': true,
+        'cancelable': true
+      });
+      form.dispatchEvent(submitEvent);
+    }
+  }
+});
 
 function endCall() {
   if (callTimer) clearInterval(callTimer);
@@ -3296,12 +3454,33 @@ async function uploadFileToStorage(file, chatId, isGroup = false) {
 
 
 async function transferTokens() {
+  console.log("🚀 Transfer Tokens button clicked!");
+  console.log("📌 Current myUID:", myUID);
+
   const recipientUID = document.getElementById("recipientUID")?.value.trim();
   const amount = parseInt(document.getElementById("transferAmount")?.value || 0);
   const resultEl = document.getElementById("transferResult");
   const transferBtn = document.getElementById("transferTokensBtn");
 
-  if (!resultEl) return;
+  console.log("📝 Recipient UID input:", recipientUID);
+  console.log("💰 Amount input:", amount);
+  console.log("🎯 Result element:", resultEl);
+  console.log("🔘 Transfer button:", transferBtn);
+
+  // Check if user is authenticated
+  if (!myUID) {
+    if (resultEl) {
+      resultEl.innerHTML = `<span style="color: #ff6b6b;">❌ Please log in first. If you are logged in, try refreshing the page.</span>`;
+    }
+    showNotif("❌ Authentication required", "error");
+    console.error("❌ myUID is null - user not authenticated");
+    return;
+  }
+
+  if (!resultEl) {
+    console.error("❌ Transfer result element not found!");
+    return;
+  }
 
   // Validation
   if (!recipientUID) {
@@ -4044,7 +4223,7 @@ async function setupInitialization() {
   initializeBasicUI();
 
   // Setup auth listener for post-auth initialization
-  auth.onAuthStateChanged(async (user) => {
+  onAuthStateChanged(auth, async (user) => {
     if (user) {
       myUID = user.uid;
       console.log("✅ User authenticated:", myUID);
@@ -4064,6 +4243,25 @@ async function setupInitialization() {
               profileBtn.style.backgroundPosition = 'center';
               profileBtn.style.fontSize = '0';
               profileBtn.style.borderRadius = '50%';
+              profileBtn.onclick = (e) => {
+                e.preventDefault();
+                // Open modal logic
+                const modal = document.getElementById('profilePicModal');
+                const modalImg = document.getElementById('profileModalImg');
+                const modalName = document.getElementById('profileModalName');
+
+                if (modal && modalImg) {
+                  modalImg.src = myProfilePic;
+                  if (modalName) modalName.innerText = myUsername || "ME";
+                  modal.style.display = 'flex';
+
+                  const editBtn = document.getElementById('editProfileBtnModal');
+                  if (editBtn) {
+                    editBtn.style.display = 'block';
+                    editBtn.onclick = () => window.location.href = 'profile-upload.html';
+                  }
+                }
+              };
             }
             const statusImg = document.getElementById('myStatusPic');
             if (statusImg) {
@@ -4071,7 +4269,23 @@ async function setupInitialization() {
             }
           }
 
+          // Also handle close modal
+          const closeProfileModal = document.getElementById('closeProfileModal');
+          if (closeProfileModal) {
+            closeProfileModal.onclick = () => {
+              document.getElementById('profilePicModal').style.display = 'none';
+            };
+          }
+
+          const profilePicModal = document.getElementById('profilePicModal');
+          if (profilePicModal) {
+            profilePicModal.onclick = (e) => {
+              if (e.target === profilePicModal) profilePicModal.style.display = 'none';
+            };
+          }
+
           const tokenCount = userData.tokens ?? 0;
+          tokens = tokenCount; // Sync initial tokens to global variable
           console.log("💰 Token count from Firebase:", tokenCount);
           console.log("💰 User data:", userData);
 
@@ -4110,6 +4324,34 @@ async function setupInitialization() {
           }
         }
 
+        // --- HANDLE MARKETPLACE REDIRECTION ---
+        const fromAd = sessionStorage.getItem('fromAdvertisement');
+        const targetUID = sessionStorage.getItem('targetUserUID');
+        const targetName = sessionStorage.getItem('targetUsername');
+        const productName = sessionStorage.getItem('productName');
+
+        if (fromAd === 'true' && targetUID && targetUID !== myUID) {
+          console.log(`🛍️ Redirected from Marketplace to chat with ${targetName}`);
+
+          // Clear flags
+          sessionStorage.removeItem('fromAdvertisement');
+          sessionStorage.removeItem('targetUserUID');
+          sessionStorage.removeItem('targetUsername');
+          sessionStorage.removeItem('productName');
+
+          // Open the chat
+          setTimeout(async () => {
+            const initialText = productName ? `Hi, I'm interested in your advertisement: "${productName}"` : "Hi, I'm interested in your advertisement!";
+            await openChat(targetUID, targetName, null, 'direct');
+
+            const messageInput = document.getElementById('message-input');
+            if (messageInput) {
+              messageInput.value = initialText;
+              messageInput.focus();
+            }
+          }, 1000);
+        }
+
         // Listen for real-time token updates - ONLY update token display, don't reset
         const tokenSnapshotUnsubscribe = onSnapshot(doc(db, "users", myUID), (userDocSnapshot) => {
           if (userDocSnapshot.exists()) {
@@ -4118,6 +4360,7 @@ async function setupInitialization() {
 
             // Only update if tokens field exists and has a valid value
             if (typeof currentTokens === 'number' && currentTokens >= 0) {
+              tokens = currentTokens; // Sync global tokens variable
               const tokenDisplay = document.getElementById("tokenCount");
               if (tokenDisplay) {
                 const oldValue = tokenDisplay.textContent;
@@ -4228,7 +4471,54 @@ async function setupInitialization() {
         showNotif("Error loading user data: " + err.message, "error");
       }
     } else {
-      window.location.href = "index.html";
+      // Prevent infinite redirect loop
+      console.warn("User not authenticated. Redirecting to login...");
+
+      // Show a friendly message before redirecting
+      const chatMain = document.querySelector('.chat-main');
+      if (chatMain) {
+        chatMain.innerHTML = `
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:80vh;text-align:center;padding:20px;">
+            <div style="font-size:60px;margin-bottom:20px;">🔒</div>
+            <h2 style="color:#00ff66;margin-bottom:10px;">Authentication Required</h2>
+            <p style="color:#888;margin-bottom:30px;">Please log in to access NEXCHAT</p>
+            <div style="color:#00ff66;font-size:14px;">Redirecting to login in <span id="countdown">3</span>...</div>
+          </div>
+        `;
+
+        // Countdown timer
+        let timeLeft = 3;
+        const countdownEl = document.getElementById('countdown');
+        const countdownTimer = setInterval(() => {
+          timeLeft--;
+          if (countdownEl) countdownEl.textContent = timeLeft;
+          if (timeLeft <= 0) {
+            clearInterval(countdownTimer);
+          }
+        }, 1000);
+      }
+
+      // Check if we've already tried redirecting
+      if (!sessionStorage.getItem('auth_redirect_block')) {
+        sessionStorage.setItem('auth_redirect_block', 'true');
+        setTimeout(() => {
+          sessionStorage.removeItem('auth_redirect_block'); // Clear for next time
+          window.location.href = "index.html";
+        }, 3000); // Increased to 3 seconds
+      } else {
+        // If we're stuck in a loop, show manual option
+        sessionStorage.removeItem('auth_redirect_block');
+        if (chatMain) {
+          chatMain.innerHTML = `
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:80vh;text-align:center;padding:20px;">
+              <div style="font-size:60px;margin-bottom:20px;">⚠️</div>
+              <h2 style="color:#ff6666;margin-bottom:10px;">Authentication Issue</h2>
+              <p style="color:#888;margin-bottom:30px;">We couldn't verify your login details.</p>
+              <button onclick="window.location.href='index.html'" style="padding:15px 30px;background:#00ff66;color:#000;border:none;border-radius:8px;cursor:pointer;font-weight:bold;font-size:16px;box-shadow: 0 4px 12px rgba(0,255,102,0.3);">Go to Login Page</button>
+            </div>
+          `;
+        }
+      }
     }
   });
 
@@ -4305,7 +4595,14 @@ async function setupInitialization() {
     }
   }, false);
 
-  document.getElementById("transferTokensBtn")?.addEventListener("click", transferTokens, false);
+  const transferTokensBtnEl = document.getElementById("transferTokensBtn");
+  if (transferTokensBtnEl) {
+    transferTokensBtnEl.addEventListener("click", transferTokens, false);
+    console.log("✅ Transfer Tokens button listener attached successfully");
+  } else {
+    console.error("❌ Transfer Tokens button not found in DOM!");
+  }
+
 
   document.getElementById("adminPanelBtn")?.addEventListener("click", () => {
     window.location.href = "../NEXCHAT-ADMIN DASH BOARD/admin-dashboard.html";
@@ -4483,6 +4780,11 @@ async function setupInitialization() {
 
   const loadChatBackground = async (chatId, chatType) => {
     try {
+      if (chatType === 'ai') {
+        applyBackgroundImage('chronex-background.jpg');
+        return;
+      }
+
       const bgDocPath = chatType === 'group'
         ? `groupBackgrounds/${chatId}`
         : `directMessageBackgrounds/${myUID}_${chatId}`;
@@ -4493,7 +4795,13 @@ async function setupInitialization() {
         applyBackgroundImage(bgDoc.data().backgroundUrl);
         localStorage.setItem(`chat_bg_${chatId}`, bgDoc.data().backgroundUrl);
       } else {
-        removeBackgroundImage();
+        // Revert to user global background or none
+        const savedBg = localStorage.getItem("nexchat_background");
+        if (savedBg) {
+          applyBackgroundImage(savedBg);
+        } else {
+          removeBackgroundImage();
+        }
         localStorage.removeItem(`chat_bg_${chatId}`);
       }
     } catch (error) {
@@ -4651,7 +4959,7 @@ async function setupInitialization() {
   });
 
   // Load saved background on init
-  const loadUserBackground = async () => {
+  window.loadUserBackground = async () => {
     try {
       // Check localStorage first
       const savedBg = localStorage.getItem("nexchat_background");
@@ -5384,12 +5692,23 @@ async function loadGroupMembersList() {
   }
 }
 
+
+// Generate Random Group Avatar
+document.getElementById('generateGroupAvatarBtn')?.addEventListener('click', () => {
+  const randomString = Math.random().toString(36).substring(7);
+  const avatarUrl = `https://robohash.org/${randomString}?set=set1&size=200x200`;
+  document.getElementById('groupIconPreview').src = avatarUrl;
+  document.getElementById('groupIconPreview').setAttribute('data-generated', 'true');
+});
+
 async function createGroup(e) {
   e.preventDefault();
 
   const nameInput = document.getElementById('groupName');
   const descInput = document.getElementById('groupDescription');
   const resultDiv = document.getElementById('groupCreateResult');
+  const iconInput = document.getElementById('groupIconInput');
+  const iconPreview = document.getElementById('groupIconPreview');
 
   // Check if user is authenticated
   if (!myUID || !auth.currentUser) {
@@ -5448,13 +5767,33 @@ async function createGroup(e) {
 
     console.log(`📝 Creating group "${name}" with ${membersList.length} members`);
 
+    let profilePicUrl = ''; // Default or empty
+
+    // Handle Icon Upload
+    if (iconInput && iconInput.files && iconInput.files[0]) {
+      try {
+        showNotif('📤 Uploading group icon...', 'info');
+        const file = iconInput.files[0];
+        const storageRefPath = `groups/${Date.now()}_${file.name}`;
+        const imgRef = storageRef(storage, storageRefPath);
+        const snapshot = await uploadBytes(imgRef, file);
+        profilePicUrl = await getDownloadURL(snapshot.ref);
+      } catch (uploadErr) {
+        console.error("Error uploading group icon:", uploadErr);
+        showNotif('⚠️ Failed to upload icon, using default', 'warning');
+      }
+    } else if (iconPreview && iconPreview.getAttribute('data-generated') === 'true') {
+      profilePicUrl = iconPreview.src;
+    }
+
     // Create group in Firestore
     const groupRef = await addDoc(collection(db, 'groups'), {
       name: name,
       description: description,
       creatorId: myUID,
       members: membersList,
-      admins: [myUID],
+      admins: [myUID], // Creator is default admin
+      profilePic: profilePicUrl,
       createdAt: serverTimestamp(),
       lastMessage: '',
       lastMessageTime: serverTimestamp()
@@ -5465,43 +5804,42 @@ async function createGroup(e) {
 
     // Generate group join link
     const groupJoinLink = `${window.location.origin}${window.location.pathname}?joinGroup=${groupRef.id}`;
-    console.log(`📎 Group join link: ${groupJoinLink}`);
 
     // Show group created message with link option
-    const resultDiv = document.getElementById('groupCreateResult');
-    resultDiv.style.display = 'block';
-    resultDiv.style.background = '#4CAF50';
-    resultDiv.style.color = '#fff';
-    resultDiv.innerHTML = `
-      <div style="padding: 15px; border-radius: 6px;">
-        <p>✅ Group "${name}" created successfully!</p>
-        <p style="font-size: 0.9rem; margin-top: 10px; opacity: 0.9;">Share this link with others to let them join:</p>
-        <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 4px; margin: 10px 0; word-break: break-all; font-size: 0.85rem; max-height: 80px; overflow-y: auto;">
-          ${groupJoinLink}
+    if (resultDiv) {
+      resultDiv.style.display = 'block';
+      resultDiv.style.background = '#4CAF50';
+      resultDiv.style.color = '#fff';
+      resultDiv.innerHTML = `
+        <div style="padding: 15px; border-radius: 6px;">
+            <p>✅ Group "${name}" created successfully!</p>
+            <p style="font-size: 0.9rem; margin-top: 10px; opacity: 0.9;">Share this link with others to let them join:</p>
+            <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 4px; margin: 10px 0; word-break: break-all; font-size: 0.85rem; max-height: 80px; overflow-y: auto;">
+            ${groupJoinLink}
+            </div>
+            <button type="button" onclick="copyGroupLink('${groupJoinLink}')" style="background: #fff; color: #333; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 10px;">📋 Copy Link</button>
         </div>
-        <button type="button" onclick="copyGroupLink('${groupJoinLink}')" style="background: #fff; color: #333; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 10px;">📋 Copy Link</button>
-      </div>
-    `;
+        `;
+    }
 
     // Reset form
     document.getElementById('createGroupForm')?.reset();
     document.getElementById('createGroupModal').style.display = 'none';
 
+    // Reset preview
+    if (iconPreview) {
+      iconPreview.src = "assets/default_group.png";
+      iconPreview.removeAttribute('data-generated');
+    }
+
     // Reload chat list to show new group
     await loadContacts();
 
     // Open the new group
-    await openChat(groupRef.id, name, '👥', 'group');
+    await openChat(groupRef.id, name, profilePicUrl || '👥', 'group');
 
   } catch (error) {
     console.error('❌ Error creating group:', error);
-    console.error('Error code:', error.code);
-    console.error('Error message:', error.message);
-    console.error('Current user:', auth.currentUser?.uid);
-    console.error('Group data being sent:', {
-      creatorId: myUID,
-      members: members
-    });
     if (resultDiv) {
       resultDiv.style.display = 'block';
       resultDiv.style.background = '#ff6b6b';
@@ -5511,6 +5849,53 @@ async function createGroup(e) {
     showNotif(`Error creating group: ${error.message}`, 'error', 3000);
   }
 }
+
+// Function to delete group (Admin only)
+async function deleteGroup(groupId) {
+  if (!confirm("⚠️ Are you sure you want to DELETE this group? This action cannot be undone and will remove the group for ALL members.")) return;
+
+  try {
+    await deleteDoc(doc(db, "groups", groupId));
+    showNotif("✅ Group deleted successfully", "success");
+    document.getElementById('groupInfoModal').style.display = 'none';
+    showChatListView();
+    await loadContacts();
+  } catch (err) {
+    console.error("Error deleting group:", err);
+    showNotif("❌ Failed to delete group", "error");
+  }
+}
+
+
+
+// Global functions for admin actions
+window.promoteMember = async (groupId, userId) => {
+  try {
+    await updateDoc(doc(db, "groups", groupId), {
+      admins: arrayUnion(userId)
+    });
+    showNotif("✅ Member promoted to Admin!", "success");
+    showGroupInfoPanel(groupId); // Refresh
+  } catch (err) {
+    showNotif("Failed to promote member", "error");
+  }
+};
+
+window.removeMember = async (groupId, userId) => {
+  if (!confirm("Remove this user from the group?")) return;
+  try {
+    const groupRef = doc(db, "groups", groupId);
+    // Note: We need arrayRemove which needs to be imported if not available, assumes available in scope like arrayUnion
+    await updateDoc(groupRef, {
+      members: arrayRemove(userId),
+      admins: arrayRemove(userId)
+    });
+    showNotif("👋 Member removed", "info");
+    showGroupInfoPanel(groupId); // Refresh
+  } catch (err) {
+    showNotif("Failed to remove member", "error");
+  }
+};
 
 async function loadGroupMessages(groupId) {
   const messagesDiv = document.getElementById('messages-area');
@@ -6148,6 +6533,28 @@ function viewStatus(status) {
 async function loadAnnouncements() {
   try {
     const announcementsFeed = document.getElementById('announcementsFeed');
+    if (!announcementsFeed) return;
+
+    // Define the pinned welcome announcement HTML
+    const pinnedAnnouncementHTML = `
+      <div class="announcement-item pinned-announcement" style="border: 2px solid #00ff66; background: rgba(0, 255, 102, 0.05); margin-bottom: 15px;">
+        <div class="announcement-header">
+          <h4 class="announcement-title">WELCOME TO NEXCHAT</h4>
+          <span class="announcement-badge" style="background: #00ff66; color: #000;">📢 NEX-DEV</span>
+        </div>
+        <p class="announcement-content" style="font-weight: 600; color: #fff;">
+          WELCOME TO NEXCHAT THE FUTURE IS INIT I AM DEMON ALEX NEX DEVELOPER....
+        </p>
+        <p class="announcement-content">
+          NEW FEATURES ARE BRINGING YOU NEX_REELS SIMILAR TO TIKTOK/SNAPCHAT BUT IT WILL BE ON NEXCHAT BY NOVEMBER 23RD... 
+          IF YOU HAVE ANY COMPLAINT KINDLY GO TO NEX SETTINGS AND FILE THEM
+        </p>
+        <div class="announcement-footer">
+          <span class="announcement-time">IMPORTANT Update</span>
+          <span class="announcement-admin">BEST REGARDS: DEMON ALEX {LINUX-DEVELOPER}</span>
+        </div>
+      </div>
+    `;
 
     const q = query(
       collection(db, 'announcements'),
@@ -6157,24 +6564,25 @@ async function loadAnnouncements() {
 
     const snapshot = await getDocs(q);
 
+    // Always start with the pinned announcement
+    announcementsFeed.innerHTML = pinnedAnnouncementHTML;
+
     if (snapshot.empty) {
-      announcementsFeed.innerHTML = `
+      announcementsFeed.innerHTML += `
         <div class="announcements-empty-state">
-          <p>📢 No announcements yet</p>
-          <p class="hint">Stay tuned for updates from NEXCHAT</p>
+          <p>📢 No other announcements yet</p>
+          <p class="hint">Stay tuned for more updates from NEXCHAT</p>
         </div>
       `;
       return;
     }
-
-    announcementsFeed.innerHTML = '';
 
     snapshot.forEach(doc => {
       const announcement = doc.data();
       const announceDiv = document.createElement('div');
       announceDiv.className = 'announcement-item';
 
-      const createdTime = announcement.createdAt?.toDate ? announcement.createdAt.toDate() : new Date(announcement.createdAt);
+      const createdTime = announcement.createdAt?.toDate ? announcement.createdAt.toDate() : (announcement.createdAt ? new Date(announcement.createdAt) : new Date());
       const timeDiff = Math.floor((Date.now() - createdTime.getTime()) / 1000);
 
       let timeText = 'Just now';
@@ -6203,7 +6611,7 @@ async function loadAnnouncements() {
       announcementsFeed.appendChild(announceDiv);
     });
 
-    showNotif('📢 Announcements loaded', 'success', 2000);
+    showNotif('📢 Announcements updated', 'success', 2000);
   } catch (error) {
     console.error('❌ Error loading announcements:', error);
     showNotif('Error loading announcements: ' + error.message, 'error');
@@ -6723,7 +7131,8 @@ async function loadGroups() {
     const q = query(
       collection(db, "groups"),
       where("members", "array-contains", myUID),
-      orderBy("lastMessageTime", "desc")
+      orderBy("lastMessageTime", "desc"),
+      limit(10)
     );
 
     const snapshot = await getDocs(q);
@@ -6787,8 +7196,16 @@ async function loadGroups() {
 
       const unreadBadgeHTML = unreadCount > 0 ? `<span class="unread-badge">${unreadCount > 99 ? '99+' : unreadCount}</span>` : '';
 
+      // Use group profile pic if available
+      let avatarHtml;
+      if (group.profilePic) {
+        avatarHtml = `<img src="${group.profilePic}" class="chat-avatar group-avatar" style="object-fit:cover;" onerror="this.src='assets/default_group.png';this.parentElement.innerHTML='👥';">`;
+      } else {
+        avatarHtml = `<div class="chat-avatar group-avatar">👥</div>`;
+      }
+
       li.innerHTML = `
-        <div class="chat-avatar-container"><div class="chat-avatar group-avatar">👥</div></div>
+        <div class="chat-avatar-container">${avatarHtml}</div>
         <div class="chat-item-content ${unreadCount > 0 ? 'unread' : ''}">
           <div class="chat-item-header">
             <span class="chat-name">${escape(group.name)}</span>
@@ -6803,7 +7220,7 @@ async function loadGroups() {
       `;
 
       li.addEventListener("click", async () => {
-        await openChat(groupId, group.name, "👥", "group");
+        await openChat(groupId, group.name, group.profilePic || "👥", "group");
         if (typeof showChatDetailView === 'function') showChatDetailView();
       });
       // Right-click context menu
@@ -6852,7 +7269,8 @@ async function loadContacts() {
       try { contactsListener(); } catch (e) { /* ignore */ }
     }
 
-    contactList.innerHTML = "";
+    // Prepare list
+    const tempContainer = document.createElement("div");
 
     // Add Chronex AI at the top
     const chronexLi = document.createElement("li");
@@ -6860,7 +7278,7 @@ async function loadContacts() {
     chronexLi.setAttribute('data-chat-id', 'chronex-ai');
     chronexLi.innerHTML = `
       <div class="chat-avatar-container">
-        <div class="chat-avatar" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); font-size: 20px;">🤖</div>
+        <img src="chronex-ai.jpg" class="chat-avatar" style="width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid #00ff66;">
       </div>
       <div class="chat-item-content">
         <div class="chat-item-header">
@@ -6877,184 +7295,238 @@ async function loadContacts() {
     chronexLi.addEventListener("click", async (e) => {
       e.stopPropagation();
       if (myUID) chronexAI.setUserId(myUID);
-      await openChat("chronex-ai", "Chronex AI", null, "ai");
+      await openChat("chronex-ai", "Chronex AI", "chronex-ai.jpg", "ai");
       if (typeof showChatDetailView === 'function') showChatDetailView();
     });
 
-    contactList.appendChild(chronexLi);
-
     // Get user's contact list
     const myUserDoc = await getDoc(doc(db, "users", myUID));
-    const myContacts = myUserDoc.data()?.contacts || [];
+    let rawContacts = myUserDoc.data()?.contacts || [];
+
+    // --- RECENT CONVERSATIONS OPTIMIZATION ---
+    // Instead of loading all contacts (which takes forever), we find the 10 most recent partners
+    let top10Contacts = [];
+    try {
+      const messagesRef = collection(db, "messages");
+      // Query recent incoming and outgoing messages
+      const qIn = query(messagesRef, where("to", "==", myUID), orderBy("timestamp", "desc"), limit(25));
+      const qOut = query(messagesRef, where("from", "==", myUID), orderBy("timestamp", "desc"), limit(25));
+
+      const [snapIn, snapOut] = await Promise.all([getDocs(qIn), getDocs(qOut)]);
+
+      const partnerMap = new Map();
+      snapIn.forEach(docSnap => {
+        const d = docSnap.data();
+        if (d.from && d.from !== myUID) {
+          const ts = d.timestamp?.toMillis ? d.timestamp.toMillis() : (d.timestamp instanceof Date ? d.timestamp.getTime() : 0);
+          if (!partnerMap.has(d.from) || ts > partnerMap.get(d.from)) partnerMap.set(d.from, ts);
+        }
+      });
+      snapOut.forEach(docSnap => {
+        const d = docSnap.data();
+        if (d.to && d.to !== myUID) {
+          const ts = d.timestamp?.toMillis ? d.timestamp.toMillis() : (d.timestamp instanceof Date ? d.timestamp.getTime() : 0);
+          if (!partnerMap.has(d.to) || ts > partnerMap.get(d.to)) partnerMap.set(d.to, ts);
+        }
+      });
+
+      // Sort partners by timestamp descending and filter out special IDs like chronex-ai
+      top10Contacts = Array.from(partnerMap.entries())
+        .sort((a, b) => b[1] - a[1])
+        .map(e => e[0])
+        .filter(uid => uid !== 'chronex-ai')
+        .slice(0, 10);
+
+      // If we still have room, add from rawContacts (most recently added first)
+      if (top10Contacts.length < 10) {
+        const otherContacts = [...rawContacts].reverse().filter(uid => !top10Contacts.includes(uid) && uid !== 'chronex-ai');
+        top10Contacts.push(...otherContacts.slice(0, 10 - top10Contacts.length));
+      }
+    } catch (err) {
+      console.warn("Recent conversations optimization failed, falling back to simplified list:", err);
+      top10Contacts = [...rawContacts].reverse().slice(0, 10);
+    }
+
+    const myContacts = top10Contacts;
 
     if (myContacts.length === 0) {
+      contactList.innerHTML = "";
+      contactList.appendChild(chronexLi);
       contactList.innerHTML += `<li class="empty-state"><p>No chats yet. Start a conversation!</p></li>`;
       return;
     }
 
-    // Load only users in the contact list
-    for (const uid of myContacts) {
-      if (uid === myUID) continue;
+    // --- OPTIMIZED PARALLEL LOADING (Max 10) ---
+    // Fetch only the top 10 contacts data in parallel
+    const batchSize = 10;
+    let contactDataList = [];
 
-      try {
-        const userDoc = await getDoc(doc(db, "users", uid));
-        if (!userDoc.exists()) continue;
-
-        const user = userDoc.data();
-        const name = user.username || user.name || "User";
-        const pic = user.profilePic || null;
-
-        const li = document.createElement("li");
-        li.className = "chat-list-item";
-        li.setAttribute('data-chat-id', uid);
-        let avatar = pic ? `<img src="${pic}" class="chat-avatar" onerror="this.src='logo.jpg'">` : `<div class="chat-avatar">${name.charAt(0)}</div>`;
-
-        // Fetch last message for this user
-        let lastMessage = "No messages yet";
-        let lastMessageTime = "";
-        let unreadCount = 0;
+    for (let i = 0; i < myContacts.length && i < 10; i += batchSize) {
+      const batch = myContacts.slice(i, i + batchSize);
+      const batchPromises = batch.map(async (uid) => {
+        if (uid === myUID) return null;
 
         try {
+          // 1. Fetch User Profile
+          const userDoc = await getDoc(doc(db, "users", uid));
+          if (!userDoc.exists()) return null;
+
+          const user = userDoc.data();
+          const name = user.username || user.name || "User";
+          const pic = user.profilePic || null;
+
+          // 2. Fetch Messages & Unread Count in Parallel
           const messagesRef = collection(db, "messages");
 
-          // Get the last message (from either direction)
-          const q1 = query(
-            messagesRef,
-            where("to", "==", uid),
-            where("from", "==", myUID),
-            orderBy("timestamp", "desc"),
-            limit(1)
-          );
+          const lastMsgPromise = (async () => {
+            const q1 = query(messagesRef, where("to", "==", uid), where("from", "==", myUID), orderBy("timestamp", "desc"), limit(1));
+            const q2 = query(messagesRef, where("from", "==", uid), where("to", "==", myUID), orderBy("timestamp", "desc"), limit(1));
+            const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
 
-          const q2 = query(
-            messagesRef,
-            where("from", "==", uid),
-            where("to", "==", myUID),
-            orderBy("timestamp", "desc"),
-            limit(1)
-          );
+            let latestMsg = null;
+            let latestTime = null;
 
-          const snap1 = await getDocs(q1);
-          const snap2 = await getDocs(q2);
-
-          let latestMsg = null;
-          let latestTime = null;
-
-          if (!snap1.empty) {
-            latestMsg = snap1.docs[0].data();
-            latestTime = snap1.docs[0].data().timestamp;
-          }
-
-          if (!snap2.empty) {
-            const msg2 = snap2.docs[0].data();
-            const time2 = snap2.docs[0].data().timestamp;
-            if (!latestTime || time2 > latestTime) {
-              latestMsg = msg2;
-              latestTime = time2;
+            if (!snap1.empty) {
+              latestMsg = snap1.docs[0].data();
+              latestTime = latestMsg.timestamp;
             }
-          }
-
-          if (latestMsg) {
-            // Format last message preview
-            if (latestMsg.text) {
-              lastMessage = (latestMsg.from === myUID ? "You: " : "") + latestMsg.text.substring(0, 40);
-              if (latestMsg.text.length > 40) lastMessage += "...";
-            } else if (latestMsg.attachment) {
-              lastMessage = (latestMsg.from === myUID ? "You: " : "") + "📎 Attachment";
-            }
-
-            // Format time
-            if (latestTime) {
-              const date = latestTime.toDate ? latestTime.toDate() : new Date(latestTime);
-              const now = new Date();
-              const diffMs = now - date;
-              const diffMins = Math.floor(diffMs / 60000);
-              const diffHours = Math.floor(diffMs / 3600000);
-              const diffDays = Math.floor(diffMs / 86400000);
-
-              if (diffMins < 1) {
-                lastMessageTime = "Now";
-              } else if (diffMins < 60) {
-                lastMessageTime = `${diffMins}m`;
-              } else if (diffHours < 24) {
-                lastMessageTime = `${diffHours}h`;
-              } else if (diffDays < 7) {
-                lastMessageTime = `${diffDays}d`;
-              } else {
-                lastMessageTime = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            if (!snap2.empty) {
+              const msg2 = snap2.docs[0].data();
+              const time2 = msg2.timestamp;
+              if (!latestTime || (time2 && time2 > latestTime)) { // Use time2 directly if latestTime is null
+                latestMsg = msg2;
+                latestTime = time2;
               }
             }
-          }
+            return { latestMsg, latestTime };
+          })();
 
-          // Count unread messages from this user
-          const unreadQuery = query(
-            messagesRef,
-            where("from", "==", uid),
-            where("to", "==", myUID),
-            where("read", "==", false)
-          );
-          const unreadSnap = await getDocs(unreadQuery);
-          unreadCount = unreadSnap.size;
+          const unreadPromise = getDocs(query(messagesRef, where("from", "==", uid), where("to", "==", myUID), where("read", "==", false)));
+
+          const [msgData, unreadSnap] = await Promise.all([lastMsgPromise, unreadPromise]);
+          const { latestMsg, latestTime } = msgData;
+          const unreadCount = unreadSnap.size;
+
+          return {
+            uid,
+            name,
+            pic,
+            latestMsg,
+            latestTime,
+            unreadCount
+          };
         } catch (e) {
-          console.log("Error loading message preview for", uid, e);
+          console.error("Error loading contact", uid, e);
+          return null;
+        }
+      });
+
+      const batchResults = await Promise.all(batchPromises);
+      contactDataList.push(...batchResults.filter(r => r !== null));
+    }
+
+    // Sort by timestamp (newest first)
+    contactDataList.sort((a, b) => {
+      const timeA = a.latestTime?.toDate ? a.latestTime.toDate() : (a.latestTime ? new Date(a.latestTime) : new Date(0));
+      const timeB = b.latestTime?.toDate ? b.latestTime.toDate() : (b.latestTime ? new Date(b.latestTime) : new Date(0));
+      return timeB - timeA;
+    });
+
+    // Render sorted list
+    contactList.innerHTML = "";
+    contactList.appendChild(chronexLi);
+
+    contactDataList.forEach(data => {
+      const { uid, name, pic, latestMsg, latestTime, unreadCount } = data;
+
+      const li = document.createElement("li");
+      li.className = "chat-list-item";
+      li.setAttribute('data-chat-id', uid);
+
+      let avatar = pic ? `<img src="${pic}" class="chat-avatar" onerror="this.src='logo.jpg'">` : `<div class="chat-avatar">${name.charAt(0)}</div>`;
+
+      // Format preview
+      let lastMessage = "No messages yet";
+      let lastMessageTime = "";
+
+      if (latestMsg) {
+        if (latestMsg.text) {
+          lastMessage = (latestMsg.from === myUID ? "You: " : "") + latestMsg.text.substring(0, 40);
+          if (latestMsg.text.length > 40) lastMessage += "...";
+        } else if (latestMsg.attachment) {
+          lastMessage = (latestMsg.from === myUID ? "You: " : "") + "📎 Attachment";
         }
 
-        // Build HTML with unread badge (green dot with count)
-        const unreadBadgeHTML = unreadCount > 0 ? `<div class="unread-badge" title="${unreadCount} unread">${unreadCount > 99 ? '99+' : unreadCount}</div>` : '';
+        if (latestTime) {
+          const date = latestTime.toDate ? latestTime.toDate() : new Date(latestTime);
+          const now = new Date();
+          const diffMs = now - date;
+          const diffMins = Math.floor(diffMs / 60000);
+          const diffHours = Math.floor(diffMs / 3600000);
+          const diffDays = Math.floor(diffMs / 86400000);
 
-        li.innerHTML = `
-          <div class="chat-avatar-container">${avatar}</div>
-          <div class="chat-item-content ${unreadCount > 0 ? 'unread' : ''}">
-            <div class="chat-item-header">
-              <span class="chat-name">${escape(name)}</span>
-            </div>
-            <p class="chat-preview">${escape(lastMessage)}</p>
+          if (diffMins < 1) lastMessageTime = "Now";
+          else if (diffMins < 60) lastMessageTime = `${diffMins}m`;
+          else if (diffHours < 24) lastMessageTime = `${diffHours}h`;
+          else if (diffDays < 7) lastMessageTime = `${diffDays}d`;
+          else lastMessageTime = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+      }
+
+      const unreadBadgeHTML = unreadCount > 0 ? `<div class="unread-badge" title="${unreadCount} unread">${unreadCount > 99 ? '99+' : unreadCount}</div>` : '';
+
+      li.innerHTML = `
+        <div class="chat-avatar-container">${avatar}</div>
+        <div class="chat-item-content ${unreadCount > 0 ? 'unread' : ''}">
+          <div class="chat-item-header">
+            <span class="chat-name">${escape(name)}</span>
           </div>
-          <div class="chat-time-container">
-            <span class="chat-item-time">${lastMessageTime}</span>
-            ${unreadBadgeHTML}
-          </div>
-          <button class="chat-menu-btn" title="Options">⋮</button>
-        `;
+          <p class="chat-preview">${escape(lastMessage)}</p>
+        </div>
+        <div class="chat-time-container">
+          <span class="chat-item-time">${lastMessageTime}</span>
+          ${unreadBadgeHTML}
+        </div>
+        <button class="chat-menu-btn" title="Options">⋮</button>
+      `;
 
-        li.addEventListener("click", async () => {
-          await openChat(uid, name, pic, "direct");
-          if (typeof showChatDetailView === 'function') showChatDetailView();
-        });
+      li.addEventListener("click", async () => {
+        await openChat(uid, name, pic, "direct");
+        if (typeof showChatDetailView === 'function') showChatDetailView();
+      });
 
-        li.addEventListener("contextmenu", (e) => {
-          e.preventDefault();
+      li.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        if (typeof showChatContextMenu === 'function') showChatContextMenu(e, uid);
+      });
+
+      // Long-press
+      let longPressTimer;
+      li.addEventListener("touchstart", (event) => {
+        longPressTimer = setTimeout(() => {
+          const touchEvent = new MouseEvent('contextmenu', {
+            clientX: event.touches?.[0]?.clientX || 0,
+            clientY: event.touches?.[0]?.clientY || 0
+          });
+          if (typeof showChatContextMenu === 'function') showChatContextMenu(touchEvent, uid);
+        }, 250);
+      });
+      li.addEventListener("touchend", () => clearTimeout(longPressTimer));
+
+      const menuBtn = li.querySelector(".chat-menu-btn");
+      if (menuBtn) {
+        menuBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
           if (typeof showChatContextMenu === 'function') showChatContextMenu(e, uid);
         });
-
-        // Long-press handler (250ms hold)
-        let longPressTimer;
-        li.addEventListener("touchstart", (event) => {
-          longPressTimer = setTimeout(() => {
-            const touchEvent = new MouseEvent('contextmenu', {
-              clientX: event.touches?.[0]?.clientX || 0,
-              clientY: event.touches?.[0]?.clientY || 0
-            });
-            if (typeof showChatContextMenu === 'function') showChatContextMenu(touchEvent, uid);
-          }, 250);
-        });
-        li.addEventListener("touchend", () => clearTimeout(longPressTimer));
-
-        const menuBtn = li.querySelector(".chat-menu-btn");
-        if (menuBtn) {
-          menuBtn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            if (typeof showChatContextMenu === 'function') showChatContextMenu(e, uid);
-          });
-        }
-
-        contactList.appendChild(li);
-      } catch (contactErr) {
-        console.error("Error loading contact", uid, contactErr);
       }
-    }
+
+      contactList.appendChild(li);
+    });
+
   } catch (err) {
     console.error("Contacts error", err);
+    contactList.innerHTML = `<li style="text-align:center; padding:10px; color: #ff6b6b;">Error loading contacts</li>`;
   }
 }
 
@@ -7085,3 +7557,73 @@ async function deleteChat(chatId, type) {
 
 // Expose deleteChat to global scope (unarchiveChat already defined earlier)
 window.deleteChat = deleteChat;
+
+// ============================================================
+// INFO SIDEBAR ACTIONS (Added by Antigravity)
+// ============================================================
+
+document.getElementById('infoBlockBtn')?.addEventListener('click', async () => {
+  if (!currentChatUser) return;
+  if (!confirm('Are you sure you want to block this user?')) return;
+
+  try {
+    const userRef = doc(db, 'users', myUID);
+    await updateDoc(userRef, {
+      blockedUsers: arrayUnion(currentChatUser)
+    });
+
+    showNotif('🚫 User blocked', 'success');
+    document.getElementById('infoBlockBtn').style.display = 'none';
+    document.getElementById('infoUnblockBtn').style.display = 'flex';
+  } catch (err) {
+    console.error('Error blocking user:', err);
+    showNotif('Failed to block user', 'error');
+  }
+});
+
+document.getElementById('infoUnblockBtn')?.addEventListener('click', async () => {
+  if (!currentChatUser) return;
+
+  try {
+    const userRef = doc(db, 'users', myUID);
+    await updateDoc(userRef, {
+      blockedUsers: arrayRemove(currentChatUser)
+    });
+
+    showNotif('✅ User unblocked', 'success');
+    document.getElementById('infoBlockBtn').style.display = 'flex';
+    document.getElementById('infoUnblockBtn').style.display = 'none';
+  } catch (err) {
+    console.error('Error unblocking user:', err);
+    showNotif('Failed to unblock user', 'error');
+  }
+});
+
+document.getElementById('infoDeleteBtn')?.addEventListener('click', () => {
+  if (!currentChatUser) return;
+  deleteChat(currentChatUser);
+});
+
+document.getElementById('muteUserToggle')?.addEventListener('change', async (e) => {
+  if (!currentChatUser) return;
+  const isMuted = e.target.checked;
+
+  try {
+    const userRef = doc(db, 'users', myUID);
+    if (isMuted) {
+      await updateDoc(userRef, {
+        mutedUsers: arrayUnion(currentChatUser)
+      });
+      showNotif('🔕 User muted', 'success');
+    } else {
+      await updateDoc(userRef, {
+        mutedUsers: arrayRemove(currentChatUser)
+      });
+      showNotif('🔔 User unmuted', 'success');
+    }
+  } catch (err) {
+    console.error("Error toggling mute:", err);
+    e.target.checked = !isMuted;
+    showNotif("Failed to update mute status", "error");
+  }
+});

@@ -19,7 +19,12 @@ if (typeof window.goBack !== 'function') {
 
 function waitForFunctions() {
   return new Promise((resolve) => {
+    let attempts = 0;
+    const maxAttempts = 50; // 5 seconds total (50 * 100ms)
+
     const checkInterval = setInterval(() => {
+      attempts++;
+
       if (
         typeof window.goBackToDashboard === 'function' &&
         typeof window.openSearch === 'function' &&
@@ -27,14 +32,14 @@ function waitForFunctions() {
         typeof window.toggleFullscreen === 'function'
       ) {
         clearInterval(checkInterval);
+        console.log('✅ All button functions loaded successfully');
+        resolve();
+      } else if (attempts >= maxAttempts) {
+        clearInterval(checkInterval);
+        console.warn('⚠️ Button functions not fully loaded after 5 seconds, proceeding anyway');
         resolve();
       }
     }, 100);
-    setTimeout(() => {
-      clearInterval(checkInterval);
-      console.warn('⚠️ Button functions not fully loaded after 5 seconds, proceeding anyway');
-      resolve();
-    }, 5000);
   });
 }
 
@@ -272,7 +277,7 @@ function attachAllButtonListeners() {
     item.addEventListener("click", (e) => {
       e.preventDefault();
       const navSection = item.dataset.nav;
-      
+
       if (navSection === 'logout') {
         // Handle logout
         if (confirm('Are you sure you want to logout?')) {
