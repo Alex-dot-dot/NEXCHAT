@@ -725,6 +725,7 @@ window.addEventListener('DOMContentLoaded', () => {
   };
 });
 
+
 function escape(text) {
   const div = document.createElement("div");
   div.textContent = text || "";
@@ -776,7 +777,7 @@ function showChatListView() {
   hideChatProfileDisplay();
 
   // Restore user background when returning to list view
-  loadUserBackground();
+  if (window.loadUserBackground) window.loadUserBackground();
 }
 
 function showChatDetailView() {
@@ -2643,8 +2644,10 @@ async function openChat(uid, username, profilePic, chatType = 'direct') {
 
         showNotif("ℹ️ User profile not fully synced yet. Chat enabled via UID.", "info");
       }
+    }
 
-      // Automatically add to contacts if not already there
+    // If it's a direct chat (not group and not AI), auto-add to contacts if not already there
+    if (chatType === 'direct' && myUID && uid !== myUID) {
       try {
         const myUserRef = doc(db, "users", myUID);
         const myUserDoc = await getDoc(myUserRef);
@@ -2657,7 +2660,7 @@ async function openChat(uid, username, profilePic, chatType = 'direct') {
 
           // Reload the contacts list to show the new conversation
           setTimeout(() => {
-            loadContacts();
+            if (typeof loadContacts === 'function') loadContacts();
           }, 300);
         }
       } catch (contactErr) {
@@ -4207,9 +4210,104 @@ function renderPoll(pollId, poll) {
       Total votes: ${totalVotes}
     </div>
   `;
-
   return pollHTML;
 }
+
+// ============================================================
+// BACKGROUND MANAGEMENT FUNCTIONS
+// ============================================================
+
+function applyBackgroundImage(imageUrl) {
+  const app = document.querySelector(".app");
+  if (app) {
+    app.style.backgroundImage = `url('${imageUrl}')`;
+    app.style.backgroundSize = 'cover';
+    app.style.backgroundPosition = 'center';
+
+    // Android Optimization: 'fixed' attachment is buggy on mobile, use 'scroll'
+    // and ensure the container is tall enough
+    if (typeof isAndroid !== 'undefined' && isAndroid) {
+      app.style.backgroundAttachment = 'scroll';
+      app.style.minHeight = '100dvh'; // Use dynamic viewport height
+    } else {
+      app.style.backgroundAttachment = 'fixed';
+    }
+
+    app.style.backgroundRepeat = 'no-repeat';
+    app.style.backgroundColor = 'transparent';
+    console.log("✅ Background applied:", imageUrl, typeof isAndroid !== 'undefined' && isAndroid ? "(Android optimized)" : "");
+  }
+}
+
+function removeBackgroundImage() {
+  const app = document.querySelector(".app");
+  if (app) {
+    app.style.backgroundImage = "none";
+    app.style.backgroundColor = ""; // Reset to default CSS value
+    console.log("✅ Background removed");
+  }
+}
+
+function updateBackgroundPreview(imageUrl) {
+  const preview = document.getElementById("backgroundPreview");
+  if (preview) {
+    preview.style.backgroundImage = `url('${imageUrl}')`;
+  }
+}
+
+async function loadChatBackground(chatId, chatType) {
+  try {
+    if (chatType === 'ai') {
+      applyBackgroundImage('chronex-background.jpg');
+      return;
+    }
+
+    if (!myUID) return;
+
+    const bgDocPath = chatType === 'group'
+      ? `groupBackgrounds/${chatId}`
+      : `directMessageBackgrounds/${myUID}_${chatId}`;
+
+    const bgDoc = await getDoc(doc(db, bgDocPath.split('/')[0], bgDocPath.split('/')[1]));
+
+    if (bgDoc.exists() && bgDoc.data().backgroundUrl) {
+      applyBackgroundImage(bgDoc.data().backgroundUrl);
+    } else {
+      // Revert to user global background
+      loadUserBackground();
+    }
+  } catch (error) {
+    console.warn("Could not load chat background:", error);
+    loadUserBackground();
+  }
+}
+
+async function loadUserBackground() {
+  try {
+    const savedBg = localStorage.getItem("nexchat_background");
+    if (savedBg) {
+      applyBackgroundImage(savedBg);
+      updateBackgroundPreview(savedBg);
+      return;
+    }
+
+    if (!myUID) return;
+
+    const bgDoc = await getDoc(doc(db, "userBackgrounds", myUID));
+    if (bgDoc.exists() && bgDoc.data().backgroundUrl) {
+      const bgUrl = bgDoc.data().backgroundUrl;
+      applyBackgroundImage(bgUrl);
+      updateBackgroundPreview(bgUrl);
+      localStorage.setItem("nexchat_background", bgUrl);
+    }
+  } catch (error) {
+    console.warn("⚠️ Failed to load user background:", error);
+  }
+}
+
+window.loadChatBackground = loadChatBackground;
+window.loadUserBackground = loadUserBackground;
+window.loadUserBackgroundOnAuth = loadUserBackground;
 
 // Initialize app after DOM is ready
 if (document.readyState === "loading") {
@@ -4774,43 +4872,7 @@ async function setupInitialization() {
     }
   });
 
-  // ============================================================
-  // PER-CHAT BACKGROUND IMAGE FEATURE
-  // ============================================================
 
-  const loadChatBackground = async (chatId, chatType) => {
-    try {
-      if (chatType === 'ai') {
-        applyBackgroundImage('chronex-background.jpg');
-        return;
-      }
-
-      const bgDocPath = chatType === 'group'
-        ? `groupBackgrounds/${chatId}`
-        : `directMessageBackgrounds/${myUID}_${chatId}`;
-
-      const bgDoc = await getDoc(doc(db, bgDocPath.split('/')[0], bgDocPath.split('/')[1]));
-
-      if (bgDoc.exists() && bgDoc.data().backgroundUrl) {
-        applyBackgroundImage(bgDoc.data().backgroundUrl);
-        localStorage.setItem(`chat_bg_${chatId}`, bgDoc.data().backgroundUrl);
-      } else {
-        // Revert to user global background or none
-        const savedBg = localStorage.getItem("nexchat_background");
-        if (savedBg) {
-          applyBackgroundImage(savedBg);
-        } else {
-          removeBackgroundImage();
-        }
-        localStorage.removeItem(`chat_bg_${chatId}`);
-      }
-    } catch (error) {
-      console.warn("Could not load chat background:", error);
-      removeBackgroundImage();
-    }
-  };
-
-  window.loadChatBackground = loadChatBackground;
 
   // Upload background for current chat
   document.getElementById("uploadChatBackgroundBtn")?.addEventListener("click", async () => {
@@ -4958,66 +5020,7 @@ async function setupInitialization() {
     }
   });
 
-  // Load saved background on init
-  window.loadUserBackground = async () => {
-    try {
-      // Check localStorage first
-      const savedBg = localStorage.getItem("nexchat_background");
-      if (savedBg) {
-        applyBackgroundImage(savedBg);
-        updateBackgroundPreview(savedBg);
-        return;
-      }
 
-      // Otherwise load from Firestore
-      if (!myUID) return;
-
-      const bgDoc = await getDoc(doc(db, "userBackgrounds", myUID));
-      if (bgDoc.exists() && bgDoc.data().backgroundUrl) {
-        const bgUrl = bgDoc.data().backgroundUrl;
-        applyBackgroundImage(bgUrl);
-        updateBackgroundPreview(bgUrl);
-        localStorage.setItem("nexchat_background", bgUrl);
-      }
-    } catch (error) {
-      console.warn("⚠️ Failed to load user background:", error);
-    }
-  };
-
-  // Functions to apply/remove backgrounds
-  function applyBackgroundImage(imageUrl) {
-    const app = document.querySelector(".app");
-    if (app) {
-      app.style.backgroundImage = `url('${imageUrl}')`;
-      app.style.backgroundSize = 'cover';
-      app.style.backgroundPosition = 'center';
-      app.style.backgroundAttachment = 'fixed';
-      app.style.backgroundRepeat = 'no-repeat';
-      console.log("✅ Background applied");
-    }
-  }
-
-  function removeBackgroundImage() {
-    const app = document.querySelector(".app");
-    if (app) {
-      app.style.backgroundImage = "none";
-      app.style.backgroundSize = '';
-      app.style.backgroundPosition = '';
-      app.style.backgroundAttachment = '';
-      app.style.backgroundRepeat = '';
-      console.log("✅ Background removed");
-    }
-  }
-
-  function updateBackgroundPreview(imageUrl) {
-    const preview = document.getElementById("backgroundPreview");
-    if (preview) {
-      preview.style.backgroundImage = `url('${imageUrl}')`;
-    }
-  }
-
-  // Load background when authenticated
-  window.loadUserBackgroundOnAuth = loadUserBackground;
 
   // Logout from settings
   document.getElementById("logoutSettingsBtn")?.addEventListener("click", () => {
@@ -7627,3 +7630,5 @@ document.getElementById('muteUserToggle')?.addEventListener('change', async (e) 
     showNotif("Failed to update mute status", "error");
   }
 });
+}
+

@@ -372,67 +372,81 @@
     </div>
 
     <script>
-        // --- REALISM ENGINE V9 (MAXIMUM CAPACITY) ---
-        // RESTORED TO 100 AVATARS & REFINED PROMPTS
+        // --- REALISM ENGINE V10 (ROBUST & HIGH CAPACITY) ---
+        // MULTI-STAGE FALLBACK SYSTEM IMPLEMENTED
+
+        const FALLBACK_SERVICES = [
+            (seed) => `https://robohash.org/${seed}?set=set1&bgset=bg1`, // Robots
+            (seed) => `https://robohash.org/${seed}?set=set2&bgset=bg2`, // Monsters/Reapers
+            (seed) => `https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${seed}`, // Clean Bots
+            (seed) => `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}` // Humans
+        ];
 
         function getAvatarUrl(type, seed) {
-            // dynamic additives based on seed to create variations
             const colors = ['neon blue', 'toxic green', 'cyber pink', 'bright red', 'golden', 'purple plasma', 'white glowing', 'electric indigo'];
             const materials = ['polished chrome', 'matte black metal', 'rusted iron', 'transparent glass', 'carbon fiber', 'brushed titanium', 'iridescent plastic'];
             const color = colors[seed % colors.length];
             const material = materials[seed % materials.length];
-
-            // Common high-fidelity keywords for consistency with "Subject 3633" style
             const qualityVibe = "hyper realistic, 8k, cinematic lighting, octane render, unreal engine 5, detailed texture";
 
+            let prompt = "";
             if (type === 'human') {
-                // SYNTHETICS: The user LOVED this style (Subject 3633)
-                // Keeping the core "Cyborg Android" look but boosting quality
-                const prompt = `portrait of a futuristic cyborg android, ${material} skin, glowing ${color} eyes, intricate biomechanical face details, half human half machine, ${qualityVibe}, depth of field`;
-                return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=600&height=600&seed=${seed}&nologo=true`;
-            }
-            else if (type === 'skull') {
-                // REAPERS: Robotic Demon Skulls - Matching the high-tech aesthetic
-                const prompt = `sinister robotic demon skull, terminator T-800 style, ${material} bone structure, burning ${color} eyes, exposed horror cabling, nightmare fuel, ${qualityVibe}`;
-                return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=600&height=600&seed=${seed}&nologo=true`;
-            }
-            else if (type === 'hacker') {
-                // NETRUNNERS: Hacker scene - Matching the requested vibe
-                const prompt = `masked cyberpunk hacker sitting in dark server room, staring at multiple monitors, glowing ${color} matrix code reflection in visor, techwear hoodie, ${material} cybernetics, ${qualityVibe}`;
-                return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=600&height=600&seed=${seed}&nologo=true`;
-            }
-            else if (type === 'mech') {
-                // WAR MACHINES: Heavy Battle Bots
-                const prompt = `portrait of a heavy war mech robot head, ${material} armor plating, battle damage, glowing ${color} lens, transformers style, aggressive design, weaponized, ${qualityVibe}`;
-                return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=600&height=600&seed=${seed}&nologo=true`;
+                prompt = `portrait of a futuristic cyborg android, ${material} skin, glowing ${color} eyes, intricate biomechanical face details, half human half machine, ${qualityVibe}, depth of field`;
+            } else if (type === 'skull') {
+                prompt = `sinister robotic demon skull, terminator T-800 style, ${material} bone structure, burning ${color} eyes, exposed horror cabling, nightmare fuel, ${qualityVibe}`;
+            } else if (type === 'hacker') {
+                prompt = `masked cyberpunk hacker sitting in dark server room, staring at multiple monitors, glowing ${color} matrix code reflection in visor, techwear hoodie, ${material} cybernetics, ${qualityVibe}`;
+            } else if (type === 'mech') {
+                prompt = `portrait of a heavy war mech robot head, ${material} armor plating, battle damage, glowing ${color} lens, transformers style, aggressive design, weaponized, ${qualityVibe}`;
+            } else {
+                prompt = `cyberpunk robot head, ${qualityVibe}`;
             }
 
-            return `https://image.pollinations.ai/prompt/cyberpunk%20robot?width=600&height=600&seed=${seed}`;
+            return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=600&height=600&seed=${seed}&nologo=true`;
         }
 
-        function getAvatarClass(type) {
-            // No filters needed now that we generate the actual imagery!
-            return 'img-standard';
-        }
+        // Global function for handling image failures
+        window.handleAvatarError = function (img, type, seed, attempt = 0) {
+            console.warn(`⚠️ Avatar load failed: ${type} (seed ${seed}, attempt ${attempt})`);
+
+            // Attempt 1: Try a different Pollinations seed (sometimes it's a transient SD error)
+            if (attempt === 0) {
+                const newSeed = seed + Math.floor(Math.random() * 1000);
+                img.src = `${img.src.split('?')[0]}?width=600&height=600&seed=${newSeed}&nologo=true`;
+                img.setAttribute('data-attempt', '1');
+                return;
+            }
+
+            // Attempt 2: Use Robohash or Dicebear based on type
+            let fallbackUrl = "";
+            if (type === 'mech' || type === 'hacker') {
+                fallbackUrl = `https://robohash.org/${seed}?set=set1`;
+            } else if (type === 'skull') {
+                fallbackUrl = `https://robohash.org/${seed}?set=set2`;
+            } else {
+                fallbackUrl = `https://api.dicebear.com/7.x/bottts/svg?seed=${seed}`;
+            }
+
+            img.src = fallbackUrl;
+            img.style.filter = "contrast(1.2) brightness(0.8) sepia(0.3) hue-rotate(120deg)"; // Cyberize the fallback
+            img.onerror = () => {
+                // Nuclear Fallback
+                img.src = "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y";
+            };
+        };
 
         // --- APP LOGIC ---
         let currentFilter = 'all';
         let selectedAvatar = null;
         const avatars = [];
 
-        // Generate 100 Avatars (25 per category) - FULL CAPACITY
         function init() {
-            // Enhanced randomness for seeds to ensure visual variety
             const baseSeed = Math.floor(Math.random() * 99999);
-
-            // Humans (25)
-            for (let i = 0; i < 25; i++) avatars.push({ type: 'human', name: `Subject ${1000 + i}`, seed: baseSeed + i });
-            // Skulls (25) 
-            for (let i = 0; i < 25; i++) avatars.push({ type: 'skull', name: `Reaper ${100 + i}`, seed: baseSeed + i + 100 });
-            // Hackers (25)
-            for (let i = 0; i < 25; i++) avatars.push({ type: 'hacker', name: `Ghost ${2000 + i}`, seed: baseSeed + i + 200 });
-            // Mechs (25)
-            for (let i = 0; i < 25; i++) avatars.push({ type: 'mech', name: `Unit X-${50 + i}`, seed: baseSeed + i + 300 });
+            // Expanded to 160 Avatars (40 per category)
+            for (let i = 0; i < 40; i++) avatars.push({ type: 'human', name: `Synth ${100 + i}`, seed: baseSeed + i });
+            for (let i = 0; i < 40; i++) avatars.push({ type: 'skull', name: `Reaper ${i + 1}`, seed: baseSeed + i + 200 });
+            for (let i = 0; i < 40; i++) avatars.push({ type: 'hacker', name: `Netnode ${500 + i}`, seed: baseSeed + i + 400 });
+            for (let i = 0; i < 40; i++) avatars.push({ type: 'mech', name: `WarUnit ${1000 + i}`, seed: baseSeed + i + 600 });
 
             render();
         }
@@ -452,33 +466,34 @@
                 if (currentFilter !== 'all' && av.type !== currentFilter) return;
 
                 const src = getAvatarUrl(av.type, av.seed);
-                const imgClass = getAvatarClass(av.type);
 
                 const card = document.createElement('div');
                 card.className = 'card';
-                // Enhanced error handling: Try to reload with a different seed/fallback if it fails
-                // prevents empty boxes
                 card.innerHTML = `
-          <div class="card-img-wrap">
-            <img src="${src}" class="card-img ${imgClass}" loading="lazy" 
-                 onerror="this.onerror=null; this.src='https://image.pollinations.ai/prompt/cyberpunk%20glitch%20error?width=600&height=600&nologo=true&seed=${Math.random()}';">
-          </div>
-          <div class="card-info">
-            <div class="card-name">${av.name}</div>
-            <div class="card-type">${av.type.toUpperCase()} CLASS</div>
-          </div>
-        `;
-                card.onclick = () => openModal(av, src, imgClass);
+                  <div class="card-img-wrap">
+                    <div class="loading-spinner" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:#555;">...</div>
+                    <img src="${src}" class="card-img" loading="lazy" 
+                         onload="this.previousElementSibling.style.display='none'"
+                         onerror="handleAvatarError(this, '${av.type}', ${av.seed}, parseInt(this.getAttribute('data-attempt') || 0))">
+                  </div>
+                  <div class="card-info">
+                    <div class="card-name">${av.name}</div>
+                    <div class="card-type">${av.type.toUpperCase()} CLASS</div>
+                  </div>
+                `;
+                card.onclick = () => openModal(av, card.querySelector('img').src);
                 g.appendChild(card);
             });
         }
 
-        function openModal(av, src, imgClass) {
-            selectedAvatar = { ...av, url: src }; // Use URL instead of svg data
+
+        function openModal(av, src) {
+            selectedAvatar = { ...av, url: src };
             const modalImg = document.getElementById('modalImg');
 
             modalImg.src = src;
-            modalImg.className = imgClass; // Apply the same filter class
+            // Clear any previous fallback filters
+            modalImg.style.filter = "";
 
             document.getElementById('modalTitle').innerText = av.name;
             document.getElementById('modalType').innerText = av.type.toUpperCase();

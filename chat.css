@@ -74,7 +74,10 @@ body {
   min-height: 100dvh;
   min-height: 100vh;
   position: relative;
-  background: #0a0a0a;
+  background-color: #0a0a0a;
+  /* Fallback color */
+  background-image: none;
+  /* Default */
   padding-bottom: max(56px, calc(var(--safe-area-bottom) + 56px));
   overflow: auto;
   padding-top: var(--safe-area-top);
