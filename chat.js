@@ -7630,5 +7630,4 @@ document.getElementById('muteUserToggle')?.addEventListener('change', async (e) 
     showNotif("Failed to update mute status", "error");
   }
 });
-}
 
