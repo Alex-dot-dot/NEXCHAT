@@ -2436,7 +2436,13 @@ function updateChatProfileDisplay(username, profilePic, status = 'Online') {
     if (activeChatName) activeChatName.textContent = username;
     if (activeChatStatus) activeChatStatus.textContent = status;
     if (activeChatAvatar) {
-      activeChatAvatar.src = profilePic || "👤";
+      if (profilePic && (profilePic.startsWith('http') || profilePic.startsWith('data:') || profilePic.includes('.'))) {
+        activeChatAvatar.src = profilePic;
+        activeChatAvatar.style.display = 'block';
+      } else {
+        // Use placeholder or hide
+        activeChatAvatar.src = 'logo.jpg'; // Better than an emoji string
+      }
 
       // AVATAR CLICK → Show Profile Picture Modal
       activeChatAvatar.style.cursor = 'pointer';
@@ -2549,14 +2555,26 @@ async function openChat(uid, username, profilePic, chatType = 'direct') {
   if (chatNameEl) chatNameEl.textContent = username;
 
   const chatProfilePicEl = document.getElementById("chatProfilePic");
-  if (chatProfilePicEl) chatProfilePicEl.src = profilePic || "👤";
+  if (chatProfilePicEl) {
+    if (profilePic && (profilePic.startsWith('http') || profilePic.startsWith('data:') || profilePic.includes('.'))) {
+      chatProfilePicEl.src = profilePic;
+    } else {
+      chatProfilePicEl.src = 'logo.jpg';
+    }
+  }
 
   // Update info sidebar (with null checks)
   const infoNameEl = document.getElementById("infoName");
   if (infoNameEl) infoNameEl.textContent = username;
 
   const infoPicEl = document.getElementById("infoPic");
-  if (infoPicEl) infoPicEl.src = profilePic || "👤";
+  if (infoPicEl) {
+    if (profilePic && (profilePic.startsWith('http') || profilePic.startsWith('data:') || profilePic.includes('.'))) {
+      infoPicEl.src = profilePic;
+    } else {
+      infoPicEl.src = 'logo.jpg';
+    }
+  }
 
   try {
     if (chatType === 'group') {
@@ -4378,10 +4396,29 @@ async function setupInitialization() {
           const profilePicModal = document.getElementById('profilePicModal');
           if (profilePicModal) {
             profilePicModal.onclick = (e) => {
-              if (e.target === profilePicModal) profilePicModal.style.display = 'none';
+              if (e.target === profilePicModal) {
+                profilePicModal.style.display = 'none';
+              }
             };
           }
 
+          // Listener for avatar selection from other pages (profile-upload or profile-avatars)
+          window.addEventListener('message', (event) => {
+            if (event.data.type === 'avatarSelected') {
+              const avatar = event.data.avatar;
+              const newPic = avatar.url || avatar.svg;
+              if (newPic) {
+                myProfilePic = newPic;
+                const profileBtn = document.getElementById('profile-sticker');
+                if (profileBtn) {
+                  profileBtn.style.backgroundImage = `url('${newPic}')`;
+                  profileBtn.style.fontSize = '0';
+                }
+                const statusImg = document.getElementById('myStatusPic');
+                if (statusImg) statusImg.src = newPic;
+              }
+            }
+          });
           const tokenCount = userData.tokens ?? 0;
           tokens = tokenCount; // Sync initial tokens to global variable
           console.log("💰 Token count from Firebase:", tokenCount);
@@ -7202,7 +7239,7 @@ async function loadGroups() {
       // Use group profile pic if available
       let avatarHtml;
       if (group.profilePic) {
-        avatarHtml = `<img src="${group.profilePic}" class="chat-avatar group-avatar" style="object-fit:cover;" onerror="this.src='logo.jpg';this.parentElement.innerHTML='👥';">`;
+        avatarHtml = `<img src="${group.profilePic}" class="chat-avatar group-avatar" style="object-fit:cover;" onerror="this.style.display='none';this.parentElement.innerHTML='👥';">`;
       } else {
         avatarHtml = `<div class="chat-avatar group-avatar">👥</div>`;
       }
@@ -7281,7 +7318,7 @@ async function loadContacts() {
     chronexLi.setAttribute('data-chat-id', 'chronex-ai');
     chronexLi.innerHTML = `
       <div class="chat-avatar-container">
-        <img src="chronex-ai.jpg" class="chat-avatar" style="width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid #00ff66;">
+        <img src="chronex-ai.jpg" class="chat-avatar" onerror="this.src='logo.jpg';this.parentElement.innerHTML='🤖';" style="width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid #00ff66;">
       </div>
       <div class="chat-item-content">
         <div class="chat-item-header">
@@ -7446,7 +7483,9 @@ async function loadContacts() {
       li.className = "chat-list-item";
       li.setAttribute('data-chat-id', uid);
 
-      let avatar = pic ? `<img src="${pic}" class="chat-avatar" onerror="this.src='logo.jpg'">` : `<div class="chat-avatar">${name.charAt(0)}</div>`;
+      let avatar = (pic && (pic.startsWith('http') || pic.startsWith('data:') || pic.includes('.')))
+        ? `<img src="${pic}" class="chat-avatar" onerror="this.style.display='none';this.parentElement.querySelector('.avatar-placeholder').style.display='flex';">` + `<div class="chat-avatar avatar-placeholder" style="display:none; background:#333; color:#fff; align-items:center; justify-content:center; font-weight:bold;">${name.charAt(0).toUpperCase()}</div>`
+        : `<div class="chat-avatar" style="background:#333; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:bold;">${name.charAt(0).toUpperCase()}</div>`;
 
       // Format preview
       let lastMessage = "No messages yet";
