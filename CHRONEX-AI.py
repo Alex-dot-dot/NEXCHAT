@@ -3,7 +3,7 @@ CHRONEX AI - Python Backend
 Advanced AI Assistant with NLP, ML, and Code Analysis
 Python: 3.8+
 Requirements: flask, nltk, requests, numpy, python-dotenv, openai, pillow
-Creator: DEMON ALEX - CREATOR OF CHRONEX AI
+Creator: DEMON ALEX CREATOR OF CHRONEX AI
 """
 
 from flask import Flask, request, jsonify
@@ -12,6 +12,7 @@ import json
 import os
 import random
 import string
+import re
 from datetime import datetime
 import logging
 import base64
@@ -398,8 +399,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ============ CREATOR INFO ============
-CREATOR = "DEMON ALEX"
-SECONDARY_CREATOR = "DEVELOPER OF NEXCHAT"
+CREATOR = "DEMON ALEX CREATOR OF CHRONEX AI"
+SECONDARY_CREATOR = "THE MASTERMIND BEHIND NEX_CORE"
 
 # Initialize Creator Library
 creator_library = CreatorLibrary()
@@ -462,6 +463,8 @@ class IntentClassifier:
             "help": ["help", "assist", "support", "guide", "teach", "show me"],
             "creative": ["create", "generate", "build", "design", "make", "develop"],
             "analysis": ["analyze", "review", "evaluate", "assess", "examine", "check"],
+            "sports": ["messi", "ronaldo", "soccer", "football", "basketball", "sport", "game", "player", "athlete", "team", "better"],
+            "space": ["sun", "mars", "moon", "star", "planet", "galaxy", "universe", "space", "orbit", "gravity", "black hole", "nasa"],
         }
         
     def detect_intent(self, message):
@@ -537,6 +540,12 @@ class KnowledgeEngine:
                 "searching": "Binary search O(log n) on sorted data. Linear search O(n) for unsorted. Hash lookup O(1) average.",
                 "dynamic_programming": "DP optimizes by storing subproblem solutions. Break problems into overlapping subproblems.",
                 "greedy": "Greedy algorithms make locally optimal choices. Works for problems with greedy-choice property.",
+            },
+            "astronomy": {
+                "solar_system": "The Solar System consists of the Sun and objects that orbit it, including 8 planets: Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune.",
+                "mars": "Mars is the 'Red Planet' due to iron oxide. It has seasons, polar ice caps, and potential for past life. NASA rovers like Perseverance explore it.",
+                "sun": "The Sun is a G-type main-sequence star. It generates energy via nuclear fusion, converting hydrogen into helium at its core.",
+                "black_holes": "Regions where gravity is so strong nothing can escape. Formed by collapsing stars. The Milky Way has a supermassive one at its center.",
             }
         }
     
@@ -632,8 +641,21 @@ class ChronexAIPython:
             lang_str = f" in {', '.join(langs)}" if langs else ""
             return f"""💻 **Code Assistance{lang_str}**\n\nI can help you with:\n• Writing and reviewing code\n• Debugging and optimization\n• Best practices and patterns\n• Algorithm implementation\n\nWhat specifically would you like help with?"""
         
-        if "math" in intents:
+        if "math" in intents or re.search(r'\d+\s*[\+\-\*\/]\s*\d+', message):
             numbers = entities['numbers']
+            
+            # Attempt to solve simple expressions directly
+            try:
+                # Basic cleaning to prevent arbitrary code execution
+                allowed_chars = set("0123456789. +-*/^() ")
+                expr = "".join(c for c in message if c in allowed_chars)
+                if any(c.isdigit() for c in expr):
+                    # Using simple evaluation for basic math
+                    result = eval(expr, {"__builtins__": None}, {})
+                    return f"""🔢 **Math Result**\n\nExpression: `{expr.strip()}`\nResult: **{result}**"""
+            except Exception:
+                pass
+                
             num_str = f" with numbers {', '.join(numbers)}" if numbers else ""
             return f"""🔢 **Mathematical Assistance{num_str}**\n\nI can solve:\n• Algebraic equations\n• Calculus problems\n• Statistics and probability\n• Linear algebra\n\nPlease share the complete problem and I'll solve it step-by-step!"""
         
@@ -641,6 +663,16 @@ class ChronexAIPython:
             topics = entities['topics']
             topic_str = f" about {', '.join(topics)}" if topics else ""
             return f"""📚 **Explanation Mode{topic_str}**\n\nI'll break this down clearly:\n• Fundamental concepts\n• Practical examples\n• Real-world applications\n• Further resources\n\nWhat specifically would you like me to explain?"""
+        
+        if "sports" in intents:
+            msg_lower = message.lower()
+            if "messi" in msg_lower and "ronaldo" in msg_lower:
+                 return """⚽ **The GOAT Debate**\n\nLionel Messi 🇦🇷 vs Cristiano Ronaldo 🇵🇹\n\n• **Messi**: The Magician. Unmatched dribbling, vision, and playmaking. 8 Ballon d'Ors.\n• **Ronaldo**: The Machine. Incredible athleticism, goal-scoring, and work ethic. 5 Ballon d'Ors.\n\n**Verdict**: It depends on what you value—pure talent (Messi) or relentless perfection (Ronaldo)."""
+            
+            return f"""🏅 **Sports Analysis**\n\nI can discuss stats, players, and history across major sports like Football, Basketball, and more. Who is your favorite athlete?"""
+            
+        if "space" in intents:
+            return f"""🚀 **Cosmic Exploration**\n\nSpace is the final frontier! I can tell you about:\n• Our Solar System (Sun, Mars, Jupiter...)\n• Black Holes & Galaxies\n• Space Exploration History (NASA, SpaceX)\n\nWhat celestial object are you curious about?"""
         
         # General intelligent response
         return f"""🧠 **Intelligent Response Mode**\n\nI understand you're asking about: {message[:100]}{'...' if len(message) > 100 else ''}\n\nBased on my analysis:\n• Intent: {', '.join(intents)}\n{f"• Languages: {', '.join(entities['languages'])}" if entities['languages'] else ''}\n{f"• Topics: {', '.join(entities['topics'])}" if entities['topics'] else ''}\n\nI'm ready to provide detailed assistance. Could you provide more specifics so I can give you the best answer?"""
@@ -669,16 +701,17 @@ class ChronexAIPython:
             ])
 
             # Try real AI first with ENHANCED context
-            context = f"""You are Chronex AI, an advanced intelligent assistant created by DEMON ALEX.
-Be helpful, accurate, and conversational.
+            context = f"""You are CHRONEX AI, the ultimate neural assistant created by DEMON ALEX CREATOR OF CHRONEX AI.
+Your purpose is to provide high-precision technical assistance, advanced problem solving, and insightful analysis.
+Maintain a professional, slightly futuristic, and extremely intelligent persona.
 
 Recent conversation:
 {recent_context}
 
-Analysis:
+System Analysis:
 - User Intent: {', '.join(analysis['intents'])}
-- Complexity: {analysis['complexity']}
-- Entities: {analysis['entities']}"""
+- Complexity Level: {analysis['complexity']}
+- Entity Mapping: {analysis['entities']}"""
 
             real_response = self.get_ai_response(message, context, analysis)
             
@@ -734,9 +767,9 @@ Analysis:
             ])
 
             # Intelligent AI response with full context awareness
-            context = f"""You are Chronex AI, an intelligent and helpful assistant by DEMON ALEX.
-You have knowledge in programming, mathematics, data science, and general conversation.
-Be natural, friendly, and adapt to the user's needs.
+            context = f"""You are CHRONEX AI, the advanced intelligence directive from DEMON ALEX CREATOR OF CHRONEX AI.
+You excel at programming, mathematics, architecture, and tactical analysis.
+Provide detailed, structured, and highly valuable responses.
 
 Recent conversation:
 {conversation_context}"""
